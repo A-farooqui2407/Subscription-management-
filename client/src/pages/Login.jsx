@@ -104,10 +104,10 @@ const Login = () => {
           </p>
         </form>
 
-        <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300 font-mono">
-          <p className="font-bold mb-1">MOCK LOGIN HINT:</p>
-          <p>Admin: admin@email.com / Admin@123</p>
-          <p>User: any@email.com / User@123</p>
+        <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300 font-mono space-y-1">
+          <p className="font-bold mb-1">Demo login (after <span className="text-white">npm run seed</span>):</p>
+          <p>admin@demo.subscription / Demo123!Secure</p>
+          <p className="text-blue-200/80 pt-1">Use your own DB users if you did not run the demo seed.</p>
         </div>
       </div>
     </div>

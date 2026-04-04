@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { subscriptionsApi } from '../api/subscriptions';
 import { contactsApi } from '../api/contacts';
@@ -10,6 +11,7 @@ import { Repeat, Filter, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Subscriptions = () => {
+  const { canWrite } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   
@@ -29,26 +31,31 @@ const Subscriptions = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await subscriptionsApi.getSubscriptions({ status: statusFilter, customerId: customerFilter });
-      setData(res);
-      
-      const cRes = await contactsApi.getContacts();
+      const [sRes, cRes, pRes] = await Promise.all([
+        subscriptionsApi.getSubscriptions({ status: statusFilter, customerId: customerFilter }),
+        contactsApi.getContacts({ limit: 100, page: 1 }),
+        plansApi.getPlans({ limit: 100, page: 1 }),
+      ]);
+      setData(sRes.rows);
+
       const cDict = {};
-      (cRes.data || cRes).forEach(c => { cDict[c.id] = c.name });
+      cRes.rows.forEach((c) => {
+        cDict[c.id] = c.name;
+      });
       setContactsDict(cDict);
-      setContactsList(cRes.data || cRes);
+      setContactsList(cRes.rows);
 
-      const pRes = await plansApi.getPlans();
       const pDict = {};
-      pRes.forEach(p => { pDict[p.id] = p.name });
+      pRes.rows.forEach((p) => {
+        pDict[p.id] = p.name;
+      });
       setPlansDict(pDict);
-
     } catch (e) {
       toast.error('Failed to parse core subscription arrays');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, customerFilter, toast]);
+  }, [statusFilter, customerFilter]);
 
   useEffect(() => {
     fetchData();
@@ -93,12 +100,14 @@ const Subscriptions = () => {
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Subscriptions Core</h1>
           <p className="mt-1 text-slate-500">Monitor native customer lifetimes tracking quotas inherently via mapped rulesets.</p>
         </div>
+        {canWrite && (
         <button 
           onClick={() => setIsModalOpen(true)}
           className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-indigo-500/50"
         >
           Draft Subscription
         </button>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
@@ -161,7 +170,7 @@ const Subscriptions = () => {
                   return (
                   <tr key={s.id} onClick={() => handleRowClick(s.id)} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
                     <td className="p-4 pl-6">
-                       <span className="font-extrabold text-slate-800 text-sm whitespace-nowrap tracking-tight">{s.subNumber}</span>
+                       <span className="font-extrabold text-slate-800 text-sm whitespace-nowrap tracking-tight">{s.subscriptionNumber}</span>
                     </td>
                     <td className="p-4">
                        <div className="font-bold text-indigo-700 text-sm">{contactsDict[s.customerId] || 'Client Unknown'}</div>

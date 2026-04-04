@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { quotationTemplatesApi } from '../api/quotationTemplates';
 import { plansApi } from '../api/plans';
@@ -9,6 +10,7 @@ import EmptyState from '../components/EmptyState';
 import { FileText, Edit2, Trash2 } from 'lucide-react';
 
 const QuotationTemplates = () => {
+  const { canWrite, isAdmin } = useAuth();
   const toast = useToast();
   
   const [data, setData] = useState([]);
@@ -25,20 +27,23 @@ const QuotationTemplates = () => {
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await quotationTemplatesApi.getTemplates();
-      setData(res);
-      
-      const pRes = await plansApi.getPlans();
-      const pDict = {};
-      pRes.forEach(p => { pDict[p.id] = p.name });
-      setPlansDict(pDict);
+      const [tRes, pRes] = await Promise.all([
+        quotationTemplatesApi.getTemplates({ limit: 100, page: 1 }),
+        plansApi.getPlans({ limit: 100, page: 1 }),
+      ]);
+      setData(tRes.rows);
 
+      const pDict = {};
+      pRes.rows.forEach((p) => {
+        pDict[p.id] = p.name;
+      });
+      setPlansDict(pDict);
     } catch (e) {
       toast.error('Failed to parse active Template definitions');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     fetchTemplates();
@@ -94,12 +99,14 @@ const QuotationTemplates = () => {
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Quotation Templates</h1>
           <p className="mt-1 text-slate-500">Accelerate B2B checkout funnels drafting predefined product logic mappings.</p>
         </div>
+        {canWrite && (
         <button 
           onClick={openCreate}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-blue-500/50"
         >
           Blueprint New SOW
         </button>
+        )}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[400px]">
@@ -153,12 +160,19 @@ const QuotationTemplates = () => {
                        </span>
                     </td>
                     <td className="p-4 pr-6 text-right space-x-2 whitespace-nowrap">
-                       <button onClick={() => openEdit(t)} className="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                       {canWrite && (
+                       <button type="button" onClick={() => openEdit(t)} className="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
                           <Edit2 className="w-4 h-4" />
                        </button>
-                       <button onClick={() => openDelete(t.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                       )}
+                       {isAdmin && (
+                       <button type="button" onClick={() => openDelete(t.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
                           <Trash2 className="w-4 h-4" />
                        </button>
+                       )}
+                       {!canWrite && !isAdmin && (
+                         <span className="text-xs text-slate-400">View only</span>
+                       )}
                     </td>
                   </tr>
                   )

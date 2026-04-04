@@ -1,5 +1,5 @@
 /**
- * Discounts — Admin only.
+ * Discounts — read for all authenticated roles; writes Admin only.
  */
 const express = require('express');
 const discountController = require('../controllers/discountController');
@@ -10,13 +10,35 @@ const validateUuid = require('../middleware/validateUuid');
 
 const router = express.Router();
 
-router.use(asyncHandler(verifyToken));
-router.use(checkRole('Admin'));
+const staffAndPortal = ['Admin', 'InternalUser', 'PortalUser'];
 
-router.get('/', discountController.getAllDiscounts);
-router.get('/:id', validateUuid('id'), discountController.getDiscountById);
-router.post('/', discountController.createDiscount);
-router.put('/:id', validateUuid('id'), discountController.updateDiscount);
-router.delete('/:id', validateUuid('id'), discountController.deleteDiscount);
+router.get(
+  '/',
+  asyncHandler(verifyToken),
+  checkRole(...staffAndPortal),
+  discountController.getAllDiscounts
+);
+router.get(
+  '/:id',
+  validateUuid('id'),
+  asyncHandler(verifyToken),
+  checkRole(...staffAndPortal),
+  discountController.getDiscountById
+);
+router.post('/', asyncHandler(verifyToken), checkRole('Admin'), discountController.createDiscount);
+router.put(
+  '/:id',
+  validateUuid('id'),
+  asyncHandler(verifyToken),
+  checkRole('Admin'),
+  discountController.updateDiscount
+);
+router.delete(
+  '/:id',
+  validateUuid('id'),
+  asyncHandler(verifyToken),
+  checkRole('Admin'),
+  discountController.deleteDiscount
+);
 
 module.exports = router;

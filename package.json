@@ -8,6 +8,9 @@
     "start": "node server/server.js",
     "dev": "node --watch server/server.js",
     "seed": "node server/scripts/seedDemo.js",
+    "set-admin": "node server/scripts/setPrimaryAdmin.js",
+    "db:create": "node server/scripts/createDatabase.js",
+    "premigrate": "node server/scripts/createDatabase.js",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo:all"
   },

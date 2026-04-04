@@ -11,15 +11,27 @@ const validateUuid = require('../middleware/validateUuid');
 const router = express.Router();
 
 router.get('/', asyncHandler(verifyToken), subscriptionController.getAllSubscriptions);
-router.post('/', asyncHandler(verifyToken), subscriptionController.createSubscription);
+router.post(
+  '/',
+  asyncHandler(verifyToken),
+  checkRole('Admin', 'InternalUser'),
+  subscriptionController.createSubscription
+);
 router.put(
   '/:id/status',
   validateUuid('id'),
   asyncHandler(verifyToken),
+  checkRole('Admin', 'InternalUser'),
   subscriptionController.updateStatus
 );
 router.get('/:id', validateUuid('id'), asyncHandler(verifyToken), subscriptionController.getSubscriptionById);
-router.put('/:id', validateUuid('id'), asyncHandler(verifyToken), subscriptionController.updateSubscription);
+router.put(
+  '/:id',
+  validateUuid('id'),
+  asyncHandler(verifyToken),
+  checkRole('Admin', 'InternalUser'),
+  subscriptionController.updateSubscription
+);
 router.delete(
   '/:id',
   validateUuid('id'),

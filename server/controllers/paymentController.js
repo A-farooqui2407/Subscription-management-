@@ -14,22 +14,14 @@ const paymentListInclude = [
   {
     model: Invoice,
     as: 'invoice',
-    attributes: [
-      'id',
-      'invoiceNumber',
-      'subscriptionId',
-      'subtotal',
-      'tax',
-      'discountAmount',
-      'total',
-      'status',
-      'dueDate',
-    ],
+    attributes: ['id', 'invoiceNumber'],
+    required: true,
     include: [
       {
         model: Subscription,
         as: 'subscription',
-        attributes: ['id', 'customerId', 'subscriptionNumber'],
+        attributes: ['id', 'customerId'],
+        required: false,
         include: [{ model: Contact, as: 'customer', attributes: ['id', 'name'] }],
       },
     ],

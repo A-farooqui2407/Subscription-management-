@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { plansApi } from '../api/plans';
 import PlanModal from '../components/PlanModal';
@@ -8,6 +9,7 @@ import EmptyState from '../components/EmptyState';
 import { Tags, Edit2, Trash2, Filter } from 'lucide-react';
 
 const Plans = () => {
+  const { isAdmin } = useAuth();
   const toast = useToast();
   
   const [data, setData] = useState([]);
@@ -27,14 +29,14 @@ const Plans = () => {
   const fetchPlans = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await plansApi.getPlans({ billingPeriod: billingPeriodFilter, isActive: isActiveFilter });
-      setData(res);
+      const { rows } = await plansApi.getPlans({ billingPeriod: billingPeriodFilter, isActive: isActiveFilter });
+      setData(rows);
     } catch (e) {
       toast.error('Failed to parse active plan schemas');
     } finally {
       setLoading(false);
     }
-  }, [billingPeriodFilter, isActiveFilter, toast]);
+  }, [billingPeriodFilter, isActiveFilter]);
 
   useEffect(() => {
     fetchPlans();
@@ -120,12 +122,14 @@ const Plans = () => {
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Subscription Schemas</h1>
           <p className="mt-1 text-slate-500">Configure recurring behavioral constraints mapped continuously to Client subscriptions.</p>
         </div>
+        {isAdmin && (
         <button 
           onClick={openCreate}
           className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-cyan-500/50"
         >
           Initialize Plan
         </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -213,10 +217,11 @@ const Plans = () => {
                        </span>
                     </td>
                     <td className="p-4 text-center">
-                      <label className="relative inline-flex items-center cursor-pointer">
+                      <label className={`relative inline-flex items-center ${isAdmin ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                         <input 
                            type="checkbox" 
                            className="sr-only peer" 
+                           disabled={!isAdmin}
                            checked={p.isActive}
                            onChange={(e) => inlineToggleActive(p, e.target.checked)} 
                         />
@@ -224,12 +229,18 @@ const Plans = () => {
                       </label>
                     </td>
                     <td className="p-4 pr-6 text-right space-x-2 whitespace-nowrap">
-                       <button onClick={() => openEdit(p)} className="p-2 text-slate-400 hover:text-cyan-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Edit2 className="w-4 h-4" />
-                       </button>
-                       <button onClick={() => openDelete(p.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Trash2 className="w-4 h-4" />
-                       </button>
+                       {isAdmin ? (
+                         <>
+                           <button type="button" onClick={() => openEdit(p)} className="p-2 text-slate-400 hover:text-cyan-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Edit2 className="w-4 h-4" />
+                           </button>
+                           <button type="button" onClick={() => openDelete(p.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Trash2 className="w-4 h-4" />
+                           </button>
+                         </>
+                       ) : (
+                         <span className="text-xs text-slate-400">View only</span>
+                       )}
                     </td>
                   </tr>
                   )

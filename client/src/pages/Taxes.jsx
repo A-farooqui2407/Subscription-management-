@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { taxesApi } from '../api/taxes';
 import TaxModal from '../components/TaxModal';
@@ -8,6 +9,7 @@ import EmptyState from '../components/EmptyState';
 import { Receipt, Edit2, Trash2, Filter } from 'lucide-react';
 
 const Taxes = () => {
+  const { isAdmin } = useAuth();
   const toast = useToast();
   
   const [data, setData] = useState([]);
@@ -27,13 +29,13 @@ const Taxes = () => {
     setLoading(true);
     try {
       const res = await taxesApi.getTaxes({ isActive: isActiveFilter });
-      setData(res);
+      setData(Array.isArray(res) ? res : []);
     } catch (e) {
       toast.error('Failed to load tax mappings');
     } finally {
       setLoading(false);
     }
-  }, [isActiveFilter, toast]);
+  }, [isActiveFilter]);
 
   useEffect(() => {
     fetchTaxes();
@@ -99,12 +101,14 @@ const Taxes = () => {
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Tax Configurations</h1>
           <p className="mt-1 text-slate-500">Regulate universally enforced VAT and sales tax percentage logics globally.</p>
         </div>
+        {isAdmin && (
         <button 
           onClick={openCreate}
           className="bg-rose-600 hover:bg-rose-700 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-rose-500/50"
         >
           Inject Tax Rule
         </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -161,10 +165,11 @@ const Taxes = () => {
                         </span>
                     </td>
                     <td className="p-4 text-center">
-                      <label className="relative inline-flex items-center cursor-pointer">
+                      <label className={`relative inline-flex items-center ${isAdmin ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                         <input 
                            type="checkbox" 
                            className="sr-only peer" 
+                           disabled={!isAdmin}
                            checked={t.isActive}
                            onChange={(e) => inlineToggleActive(t, e.target.checked)} 
                         />
@@ -172,12 +177,18 @@ const Taxes = () => {
                       </label>
                     </td>
                     <td className="p-4 pr-6 text-right space-x-2">
-                       <button onClick={() => openEdit(t)} className="p-2 text-slate-400 hover:text-rose-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Edit2 className="w-4 h-4" />
-                       </button>
-                       <button onClick={() => openDelete(t.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Trash2 className="w-4 h-4" />
-                       </button>
+                       {isAdmin ? (
+                         <>
+                           <button type="button" onClick={() => openEdit(t)} className="p-2 text-slate-400 hover:text-rose-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Edit2 className="w-4 h-4" />
+                           </button>
+                           <button type="button" onClick={() => openDelete(t.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Trash2 className="w-4 h-4" />
+                           </button>
+                         </>
+                       ) : (
+                         <span className="text-xs text-slate-400">View only</span>
+                       )}
                     </td>
                   </tr>
                 ))}

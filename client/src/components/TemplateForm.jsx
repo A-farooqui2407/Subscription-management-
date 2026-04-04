@@ -21,9 +21,9 @@ const TemplateForm = ({ isOpen, onClose, onSave, templateToEdit }) => {
 
   useEffect(() => {
     if (isOpen) {
-        productsApi.getProducts().then(res => setProducts(res.data || res));
-        plansApi.getPlans().then(res => setPlans(res));
-        taxesApi.getTaxes().then(res => setTaxes(res));
+        productsApi.getProducts({ limit: 100, page: 1 }).then((res) => setProducts(res.rows));
+        plansApi.getPlans({ limit: 100, page: 1 }).then((res) => setPlans(res.rows));
+        taxesApi.getTaxes().then((list) => setTaxes(Array.isArray(list) ? list : []));
     }
   }, [isOpen]);
 

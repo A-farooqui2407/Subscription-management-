@@ -2,7 +2,6 @@
  * Dashboard KPIs + filtered invoice reports.
  */
 const { Op } = require('sequelize');
-const { sequelize } = require('../config/db');
 const {
   Subscription,
   Payment,
@@ -61,6 +60,9 @@ function buildInvoiceWhereForReports(query) {
 
 const getDashboardKPIs = asyncHandler(async (req, res) => {
   const today = todayDateOnly();
+  const revenueSince = new Date();
+  revenueSince.setUTCDate(revenueSince.getUTCDate() - 30);
+  const revenueSinceStr = revenueSince.toISOString().slice(0, 10);
 
   const overdueInvoiceWhere = {
     status: { [Op.ne]: 'paid' },
@@ -69,7 +71,7 @@ const getDashboardKPIs = asyncHandler(async (req, res) => {
 
   const [
     activeSubscriptions,
-    totalRevenueRow,
+    totalRevenue,
     pendingPayments,
     overdueInvoices,
     recentSubscriptions,
@@ -77,16 +79,15 @@ const getDashboardKPIs = asyncHandler(async (req, res) => {
     overdueInvoicesList,
   ] = await Promise.all([
     Subscription.count({ where: { status: 'active' } }),
-    Payment.findOne({
-      attributes: [[sequelize.fn('SUM', sequelize.col('amount')), 'total']],
-      raw: true,
+    Payment.sum('amount', {
+      where: { paymentDate: { [Op.gte]: revenueSinceStr } },
     }),
     Invoice.count({ where: { status: 'confirmed' } }),
     Invoice.count({ where: overdueInvoiceWhere }),
     Subscription.findAll({
       limit: 5,
       order: [['createdAt', 'DESC']],
-      attributes: ['id', 'subscriptionNumber', 'status', 'createdAt'],
+      attributes: ['id', 'subscriptionNumber', 'status', 'createdAt', 'total'],
       include: [
         { model: Contact, as: 'customer', attributes: ['id', 'name'] },
         { model: Plan, as: 'plan', attributes: ['id', 'name'] },
@@ -95,20 +96,12 @@ const getDashboardKPIs = asyncHandler(async (req, res) => {
     Payment.findAll({
       limit: 5,
       order: [['createdAt', 'DESC']],
-      attributes: ['id', 'amount', 'paymentMethod', 'paymentDate', 'createdAt'],
+      attributes: ['id', 'invoiceId', 'amount', 'paymentMethod', 'paymentDate', 'createdAt'],
       include: [
         {
           model: Invoice,
           as: 'invoice',
           attributes: ['id', 'invoiceNumber'],
-          include: [
-            {
-              model: Subscription,
-              as: 'subscription',
-              attributes: ['id'],
-              include: [{ model: Contact, as: 'customer', attributes: ['id', 'name'] }],
-            },
-          ],
         },
       ],
     }),
@@ -136,14 +129,13 @@ const getDashboardKPIs = asyncHandler(async (req, res) => {
     }),
   ]);
 
-  const totalRevenue =
-    totalRevenueRow && totalRevenueRow.total != null ? Number(totalRevenueRow.total) : 0;
+  const revenueNum = totalRevenue != null ? Number(totalRevenue) : 0;
 
   return res.success(
     {
       kpis: {
         activeSubscriptions,
-        totalRevenue,
+        totalRevenue: revenueNum,
         pendingPayments,
         overdueInvoices,
       },

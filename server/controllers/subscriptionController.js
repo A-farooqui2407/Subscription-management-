@@ -47,6 +47,14 @@ function subscriptionIncludeList() {
   ];
 }
 
+/** List grid only — avoids discount / order line / product joins. */
+function subscriptionIncludeListLite() {
+  return [
+    { model: Contact, as: 'customer', attributes: ['id', 'name'] },
+    { model: Plan, as: 'plan', attributes: ['id', 'name'] },
+  ];
+}
+
 function subscriptionIncludeDetail() {
   return [
     {
@@ -252,7 +260,7 @@ const getAllSubscriptions = asyncHandler(async (req, res) => {
     limit,
     offset,
     order: [['createdAt', 'DESC']],
-    include: subscriptionIncludeList(),
+    include: subscriptionIncludeListLite(),
   });
 
   const data = rows.map((r) => r.get({ plain: true }));

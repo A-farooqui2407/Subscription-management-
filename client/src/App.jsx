@@ -58,17 +58,13 @@ function App() {
           <Route element={<ProtectedRoute withLayout={true} />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/reports" element={<Reports />} />
-            
-            {/* Admin only routes */}
-            <Route element={<ProtectedRoute roles={['admin']} />}>
-              <Route path="/users" element={<Users />} />
-              <Route path="/plans" element={<Plans />} />
-              <Route path="/taxes" element={<Taxes />} />
-              <Route path="/discounts" element={<Discounts />} />
-              <Route path="/quotation-templates" element={<QuotationTemplates />} />
-            </Route>
+            <Route path="/users" element={<Users />} />
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/taxes" element={<Taxes />} />
+            <Route path="/discounts" element={<Discounts />} />
+            <Route path="/quotation-templates" element={<QuotationTemplates />} />
 
-            {/* General user / admin routes */}
+            {/* All authenticated roles (portal = read-only in UI + API) */}
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />

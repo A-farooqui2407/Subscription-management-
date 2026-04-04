@@ -32,12 +32,12 @@ const SubscriptionForm = ({ isOpen, onClose, onSave }) => {
 
   useEffect(() => {
     if (isOpen) {
-        productsApi.getProducts().then(res => setProducts(res.data || res));
-        plansApi.getPlans().then(setPlans);
-        taxesApi.getTaxes().then(setTaxes);
-        contactsApi.getContacts().then(res => setContacts(res.data || res));
-        quotationTemplatesApi.getTemplates().then(setTemplates);
-        discountsApi.getDiscounts({ isActive: 'true' }).then(setDiscounts);
+        productsApi.getProducts({ limit: 100, page: 1 }).then((res) => setProducts(res.rows));
+        plansApi.getPlans({ limit: 100, page: 1 }).then((res) => setPlans(res.rows));
+        taxesApi.getTaxes().then((list) => setTaxes(Array.isArray(list) ? list : []));
+        contactsApi.getContacts({ limit: 100, page: 1 }).then((res) => setContacts(res.rows));
+        quotationTemplatesApi.getTemplates({ limit: 100, page: 1 }).then((res) => setTemplates(res.rows));
+        discountsApi.getDiscounts({ isActive: 'true', limit: 100, page: 1 }).then((res) => setDiscounts(res.rows));
         
         // Reset state on open since this is pure creation
         setFormData({ customerId: '', planId: '', startDate: new Date().toISOString().split('T')[0], expirationDate: '', paymentTerms: 'NET 30', discountId: '', status: 'draft' });

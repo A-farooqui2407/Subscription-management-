@@ -10,8 +10,7 @@ import { ArrowLeft, Plus, Box, Layers } from 'lucide-react';
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const { role } = useAuth();
-  const isAdmin = role === 'admin';
+  const { isAdmin } = useAuth();
   const toast = useToast();
   
   const [product, setProduct] = useState(null);

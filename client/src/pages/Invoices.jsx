@@ -21,20 +21,23 @@ const Invoices = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await invoicesApi.getInvoices({ status: statusFilter });
-      setData(res);
-      
-      const cRes = await contactsApi.getContacts();
-      const cDict = {};
-      (cRes.data || cRes).forEach(c => { cDict[c.id] = c.name });
-      setContactsDict(cDict);
+      const [iRes, cRes] = await Promise.all([
+        invoicesApi.getInvoices({ status: statusFilter }),
+        contactsApi.getContacts({ limit: 100, page: 1 }),
+      ]);
+      setData(iRes.rows);
 
+      const cDict = {};
+      cRes.rows.forEach((c) => {
+        cDict[c.id] = c.name;
+      });
+      setContactsDict(cDict);
     } catch (e) {
       toast.error('Failed to parse invoices natively');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, toast]);
+  }, [statusFilter]);
 
   useEffect(() => {
     fetchData();
@@ -131,7 +134,7 @@ const Invoices = () => {
                        <div className="text-xs text-slate-500 mt-1 font-medium">Issued: {inv.issueDate}</div>
                     </td>
                     <td className="p-4">
-                       <div className="font-bold text-slate-700 text-sm">{contactsDict[inv.customerId] || 'Client Voided'}</div>
+                       <div className="font-bold text-slate-700 text-sm">{inv.subscription?.customer?.name || contactsDict[inv.subscription?.customerId] || 'Client Voided'}</div>
                     </td>
                     <td className="p-4 text-sm font-medium text-slate-400">
                        {inv.subscriptionId ? `SUB-...${inv.subscriptionId}` : 'Ad-hoc (Direct)'}
