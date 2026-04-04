@@ -78,6 +78,11 @@ const Subscription = sequelize.define(
   {
     tableName: 'subscriptions',
     paranoid: true,
+    indexes: [
+      { fields: ['status'] },
+      { fields: ['customerId'] },
+      { fields: ['planId'] },
+    ],
     hooks: {
       beforeCreate: (sub) => {
         if (!sub.subscriptionNumber) {

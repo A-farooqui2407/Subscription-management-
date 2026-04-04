@@ -4,36 +4,37 @@
 const express = require('express');
 const verifyToken = require('../middleware/verifyToken');
 const checkRole = require('../middleware/checkRole');
+const asyncHandler = require('../utils/asyncHandler');
 const invoiceController = require('../controllers/invoiceController');
 
 const router = express.Router();
 
-router.get('/', verifyToken, invoiceController.getAllInvoices);
+router.get('/', asyncHandler(verifyToken), invoiceController.getAllInvoices);
 router.put(
   '/:id/confirm',
-  verifyToken,
+  asyncHandler(verifyToken),
   checkRole('Admin', 'InternalUser'),
   invoiceController.confirmInvoice
 );
 router.put(
   '/:id/cancel',
-  verifyToken,
+  asyncHandler(verifyToken),
   checkRole('Admin', 'InternalUser'),
   invoiceController.cancelInvoice
 );
 router.post(
   '/:id/send',
-  verifyToken,
+  asyncHandler(verifyToken),
   checkRole('Admin', 'InternalUser'),
   invoiceController.sendInvoice
 );
-router.get('/:id/print', verifyToken, invoiceController.printInvoice);
+router.get('/:id/print', asyncHandler(verifyToken), invoiceController.printInvoice);
 router.post(
   '/:id/payments',
-  verifyToken,
+  asyncHandler(verifyToken),
   checkRole('Admin', 'InternalUser'),
   invoiceController.recordPayment
 );
-router.get('/:id', verifyToken, invoiceController.getInvoiceById);
+router.get('/:id', asyncHandler(verifyToken), invoiceController.getInvoiceById);
 
 module.exports = router;

@@ -1,7 +1,10 @@
 /**
- * HTTP server entry — loads models/associations, tests DB, starts Express.
+ * HTTP server entry — validates env, loads models/associations, tests DB, starts Express.
  */
 require('dotenv').config();
+
+const { validateEnv } = require('./config/validateEnv');
+validateEnv();
 
 const app = require('./app');
 const { testConnection } = require('./config/db');
@@ -19,7 +22,7 @@ async function start() {
     // Continue so API can still run once DB is configured; remove this block to fail fast.
   }
 
-  // Optional: await sequelize.sync({ alter: true }) — use migrations in production
+  // Production: use versioned migrations (e.g. sequelize-cli) — never rely on sync({ alter: true }).
 
   app.listen(PORT, () => {
     // eslint-disable-next-line no-console

@@ -4,27 +4,28 @@
 const express = require('express');
 const verifyToken = require('../middleware/verifyToken');
 const checkRole = require('../middleware/checkRole');
+const asyncHandler = require('../utils/asyncHandler');
 const quotationTemplateController = require('../controllers/quotationTemplateController');
 
 const router = express.Router();
 
-router.get('/', verifyToken, quotationTemplateController.getAllTemplates);
-router.get('/:id', verifyToken, quotationTemplateController.getTemplateById);
+router.get('/', asyncHandler(verifyToken), quotationTemplateController.getAllTemplates);
+router.get('/:id', asyncHandler(verifyToken), quotationTemplateController.getTemplateById);
 router.post(
   '/',
-  verifyToken,
+  asyncHandler(verifyToken),
   checkRole('Admin', 'InternalUser'),
   quotationTemplateController.createTemplate
 );
 router.put(
   '/:id',
-  verifyToken,
+  asyncHandler(verifyToken),
   checkRole('Admin', 'InternalUser'),
   quotationTemplateController.updateTemplate
 );
 router.delete(
   '/:id',
-  verifyToken,
+  asyncHandler(verifyToken),
   checkRole('Admin'),
   quotationTemplateController.deleteTemplate
 );

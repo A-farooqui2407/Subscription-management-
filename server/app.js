@@ -1,5 +1,5 @@
 /**
- * Express application — middleware, route mounting, CORS, global error handler.
+ * Express application — security headers, CORS, middleware, route mounting, global error handler.
  */
 require('dotenv').config();
 
@@ -7,7 +7,9 @@ require('./models/index');
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 
+const { getCorsOriginOption } = require('./config/validateEnv');
 const { attachResponseHelpers } = require('./utils/responseHelpers');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -27,10 +29,10 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
-// TODO: tighten CORS (origin whitelist from env) for production
+app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: getCorsOriginOption(),
     credentials: true,
   })
 );
