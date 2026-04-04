@@ -1,60 +1,179 @@
 /**
- * Products + variants — Admin-only product CRUD; variants linked to product.
+ * Products — reads for authenticated users; writes Admin-only (routes).
  */
+const { Op } = require('sequelize');
+const Product = require('../models/Product');
+const Variant = require('../models/Variant');
+const OrderLine = require('../models/OrderLine');
+const Subscription = require('../models/Subscription');
+const asyncHandler = require('../utils/asyncHandler');
 
-async function createProduct(req, res, next) {
-  // TODO: name, productType, salesPrice, costPrice
-  res.status(501).json({ message: 'Not implemented' });
+const PRODUCT_TYPES = ['Service', 'Physical', 'Digital'];
+
+function parsePagination(query) {
+  const page = Math.max(1, parseInt(query.page, 10) || 1);
+  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
+  const offset = (page - 1) * limit;
+  return { page, limit, offset };
 }
 
-async function listProducts(req, res, next) {
-  // TODO: list all products (optional pagination)
-  res.status(501).json({ message: 'Not implemented' });
+function parseDecimal(value, fallback = 0) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+  const n = Number(value);
+  if (Number.isNaN(n)) {
+    return null;
+  }
+  return n;
 }
 
-async function getProductById(req, res, next) {
-  // TODO: include variants optionally
-  res.status(501).json({ message: 'Not implemented' });
-}
+const getAllProducts = asyncHandler(async (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query);
+  const where = {};
 
-async function updateProduct(req, res, next) {
-  // TODO: update product fields
-  res.status(501).json({ message: 'Not implemented' });
-}
+  const { productType, search } = req.query;
+  if (productType !== undefined && productType !== '') {
+    if (!PRODUCT_TYPES.includes(productType)) {
+      return res.error('Invalid productType filter', 400);
+    }
+    where.productType = productType;
+  }
+  if (search !== undefined && search !== '') {
+    where.name = { [Op.iLike]: `%${String(search).trim()}%` };
+  }
 
-async function deleteProduct(req, res, next) {
-  // TODO: handle variants / order line references
-  res.status(501).json({ message: 'Not implemented' });
-}
+  const count = await Product.count({ where });
+  const rows = await Product.findAll({
+    where,
+    limit,
+    offset,
+    order: [['createdAt', 'DESC']],
+    include: [{ model: Variant, as: 'variants', required: false }],
+  });
 
-async function createVariant(req, res, next) {
-  // TODO: productId from route/body; attribute, value, extraPrice
-  res.status(501).json({ message: 'Not implemented' });
-}
+  const data = rows.map((p) => p.get({ plain: true }));
+  return res.paginated(data, count, page, limit);
+});
 
-async function updateVariant(req, res, next) {
-  // TODO: update variant by id; ensure belongs to product
-  res.status(501).json({ message: 'Not implemented' });
-}
+const getProductById = asyncHandler(async (req, res) => {
+  const product = await Product.findByPk(req.params.id, {
+    include: [{ model: Variant, as: 'variants', required: false }],
+  });
+  if (!product) {
+    return res.error('Product not found', 404);
+  }
+  return res.success(product.get({ plain: true }), 'Success', 200);
+});
 
-async function deleteVariant(req, res, next) {
-  // TODO: delete variant
-  res.status(501).json({ message: 'Not implemented' });
-}
+const createProduct = asyncHandler(async (req, res) => {
+  const { name, productType, salesPrice, costPrice } = req.body;
 
-async function listVariantsByProductId(req, res, next) {
-  // TODO: GET /products/:productId/variants — all variants for product
-  res.status(501).json({ message: 'Not implemented' });
-}
+  if (!name || !productType || salesPrice === undefined || salesPrice === null || salesPrice === '') {
+    return res.error('Name, productType, and salesPrice are required', 400);
+  }
+
+  if (!PRODUCT_TYPES.includes(productType)) {
+    return res.error('productType must be Service, Physical, or Digital', 400);
+  }
+
+  const sp = parseDecimal(salesPrice);
+  if (sp === null || sp < 0) {
+    return res.error('Invalid salesPrice', 400);
+  }
+  const cp = parseDecimal(costPrice, 0);
+  if (cp === null || cp < 0) {
+    return res.error('Invalid costPrice', 400);
+  }
+
+  const product = await Product.create({
+    name: String(name).trim(),
+    productType,
+    salesPrice: sp,
+    costPrice: cp,
+    createdBy: req.user.id,
+  });
+
+  const created = await Product.findByPk(product.id, {
+    include: [{ model: Variant, as: 'variants', required: false }],
+  });
+
+  return res.success(created.get({ plain: true }), 'Product created', 201);
+});
+
+const updateProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findByPk(req.params.id);
+  if (!product) {
+    return res.error('Product not found', 404);
+  }
+
+  const { name, productType, salesPrice, costPrice } = req.body;
+
+  if (name !== undefined) {
+    product.name = String(name).trim();
+  }
+  if (productType !== undefined) {
+    if (!PRODUCT_TYPES.includes(productType)) {
+      return res.error('productType must be Service, Physical, or Digital', 400);
+    }
+    product.productType = productType;
+  }
+  if (salesPrice !== undefined) {
+    const sp = parseDecimal(salesPrice);
+    if (sp === null || sp < 0) {
+      return res.error('Invalid salesPrice', 400);
+    }
+    product.salesPrice = sp;
+  }
+  if (costPrice !== undefined) {
+    const cp = parseDecimal(costPrice, 0);
+    if (cp === null || cp < 0) {
+      return res.error('Invalid costPrice', 400);
+    }
+    product.costPrice = cp;
+  }
+
+  await product.save();
+
+  const updated = await Product.findByPk(product.id, {
+    include: [{ model: Variant, as: 'variants', required: false }],
+  });
+
+  return res.success(updated.get({ plain: true }), 'Product updated', 200);
+});
+
+const deleteProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findByPk(req.params.id);
+  if (!product) {
+    return res.error('Product not found', 404);
+  }
+
+  const lines = await OrderLine.findAll({
+    where: { productId: product.id },
+    attributes: ['subscriptionId'],
+  });
+  const subscriptionIds = [...new Set(lines.map((l) => l.subscriptionId))];
+
+  if (subscriptionIds.length > 0) {
+    const activeCount = await Subscription.count({
+      where: {
+        id: { [Op.in]: subscriptionIds },
+        status: { [Op.in]: ['active', 'confirmed'] },
+      },
+    });
+    if (activeCount > 0) {
+      return res.error('Cannot delete product used on active or confirmed subscriptions', 400);
+    }
+  }
+
+  await product.destroy();
+  return res.success(null, 'Product deleted successfully', 200);
+});
 
 module.exports = {
-  createProduct,
-  listProducts,
+  getAllProducts,
   getProductById,
+  createProduct,
   updateProduct,
   deleteProduct,
-  createVariant,
-  updateVariant,
-  deleteVariant,
-  listVariantsByProductId,
 };

@@ -24,7 +24,7 @@ const sequelize = new Sequelize(
  * Test database connectivity (optional health check).
  */
 async function testConnection() {
-  // TODO: await sequelize.authenticate()
+  await sequelize.authenticate();
 }
 
 module.exports = { sequelize, testConnection };
