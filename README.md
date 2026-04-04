@@ -11,7 +11,7 @@ This project is a full-stack Subscription Management System built using:
 * Frontend: React
 * Backend: Node.js + Express
 * Auth: JWT
-* DB: PostgreSQL / MongoDB
+* DB: PostgreSQL 
 
 Core Flow:
 Product → Plan → Subscription → Invoice → Payment → Dashboard
