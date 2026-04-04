@@ -1,5 +1,5 @@
 /**
- * Users — Admin only.
+ * Users — list/read for Admin + Internal + Portal; writes Admin only.
  */
 const express = require('express');
 const userController = require('../controllers/userController');
@@ -10,13 +10,35 @@ const validateUuid = require('../middleware/validateUuid');
 
 const router = express.Router();
 
-router.use(asyncHandler(verifyToken));
-router.use(checkRole('Admin'));
+const staffAndPortal = ['Admin', 'InternalUser', 'PortalUser'];
 
-router.get('/', userController.getAllUsers);
-router.get('/:id', validateUuid('id'), userController.getUserById);
-router.post('/', userController.createInternalUser);
-router.put('/:id', validateUuid('id'), userController.updateUser);
-router.delete('/:id', validateUuid('id'), userController.deleteUser);
+router.get(
+  '/',
+  asyncHandler(verifyToken),
+  checkRole(...staffAndPortal),
+  userController.getAllUsers
+);
+router.get(
+  '/:id',
+  validateUuid('id'),
+  asyncHandler(verifyToken),
+  checkRole(...staffAndPortal),
+  userController.getUserById
+);
+router.post('/', asyncHandler(verifyToken), checkRole('Admin'), userController.createInternalUser);
+router.put(
+  '/:id',
+  validateUuid('id'),
+  asyncHandler(verifyToken),
+  checkRole('Admin'),
+  userController.updateUser
+);
+router.delete(
+  '/:id',
+  validateUuid('id'),
+  asyncHandler(verifyToken),
+  checkRole('Admin'),
+  userController.deleteUser
+);
 
 module.exports = router;

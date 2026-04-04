@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { invoicesApi } from '../api/invoices';
 import { paymentsApi } from '../api/payments';
-import { contactsApi } from '../api/contacts';
 import Spinner from '../components/Spinner';
 import PaymentModal from '../components/PaymentModal';
 import { ArrowLeft, Receipt, CheckCircle, XCircle, Send, Printer, CreditCard, Clock } from 'lucide-react';
 
 const InvoiceDetail = () => {
   const { id } = useParams();
+  const { canWrite } = useAuth();
   const toast = useToast();
   
   const [inv, setInv] = useState(null);
@@ -27,16 +28,8 @@ const InvoiceDetail = () => {
     try {
       const data = await invoicesApi.getInvoiceById(id);
       setInv(data);
-      
-      const pays = await paymentsApi.getPaymentsByInvoice(id);
-      setPayments(pays);
-
-      if (data.customerId) {
-          const cRes = await contactsApi.getContacts();
-          const targetC = (cRes.data || cRes).find(c => c.id === data.customerId);
-          setContact(targetC);
-      }
-
+      setPayments(Array.isArray(data.payments) ? data.payments : []);
+      setContact(data.subscription?.customer || null);
     } catch (e) {
       toast.error('Critical failure mapping invoice layout components.');
     } finally {
@@ -62,7 +55,6 @@ const InvoiceDetail = () => {
   const handleRecordPayment = async (pData) => {
       try {
           await paymentsApi.createPayment(pData);
-          await invoicesApi.updateAmountPaid(id, pData.amount);
           toast.success("Payment officially tracked globally. Ledger synced.");
           setIsPaymentModalOpen(false);
           fetchDetail();
@@ -73,6 +65,8 @@ const InvoiceDetail = () => {
 
   if (loading) return <div className="flex-1 flex justify-center items-center p-24"><Spinner size="lg" color="red" /></div>;
   if (!inv) return <div className="p-8 text-center text-slate-500 font-medium">Invoice reference detached permanently.</div>;
+
+  const clearedTotal = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
 
   const StatusBadge = ({ status }) => {
      const statusMaps = {
@@ -148,7 +142,7 @@ const InvoiceDetail = () => {
                 <div>
                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">{inv.invoiceNumber}</h1>
                    <p className="text-sm font-medium text-slate-500 mt-2 flex gap-4">
-                      <span>Issued: {inv.issueDate}</span>
+                      <span>Issued: {inv.issueDate || (inv.createdAt && String(inv.createdAt).slice(0, 10))}</span>
                       <span className={`${isOverdue(inv) ? 'text-red-600 font-bold' : ''}`}>Due Target: {inv.dueDate}</span>
                    </p>
                 </div>
@@ -181,17 +175,24 @@ const InvoiceDetail = () => {
                   </tr>
                </thead>
                <tbody className="divide-y divide-slate-100">
-                  {inv.lines?.map(line => (
+                  {(inv.lines || inv.subscription?.orderLines || []).map((line) => {
+                    const productLabel =
+                      typeof line.product === 'string'
+                        ? line.product
+                        : line.product?.name || 'Line item';
+                    const taxPct = line.taxPercentage ?? line.tax?.percentage ?? 0;
+                    return (
                      <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-4 pl-6">
-                           <span className="font-bold text-slate-800 text-sm">{line.product}</span>
+                           <span className="font-bold text-slate-800 text-sm">{productLabel}</span>
                         </td>
-                        <td className="p-4 text-center text-sm font-mono text-slate-600">${line.unitPrice.toFixed(2)}</td>
+                        <td className="p-4 text-center text-sm font-mono text-slate-600">${Number(line.unitPrice || 0).toFixed(2)}</td>
                         <td className="p-4 text-center text-sm font-medium text-slate-700">{line.qty}</td>
-                        <td className="p-4 text-center text-sm font-medium text-slate-500">{line.taxPercentage}%</td>
-                        <td className="p-4 pr-6 text-right font-mono text-sm font-black text-slate-800">${line.amount.toFixed(2)}</td>
+                        <td className="p-4 text-center text-sm font-medium text-slate-500">{taxPct}%</td>
+                        <td className="p-4 pr-6 text-right font-mono text-sm font-black text-slate-800">${Number(line.amount || 0).toFixed(2)}</td>
                      </tr>
-                  ))}
+                    );
+                  })}
                </tbody>
             </table>
         </div>
@@ -204,7 +205,7 @@ const InvoiceDetail = () => {
                  </div>
                  <div className="flex justify-between items-center text-slate-600">
                      <span className="text-sm font-bold tracking-wide">Tax Arrays Computed</span>
-                     <span className="font-mono text-sm">${(inv.taxTotal || 0).toFixed(2)}</span>
+                     <span className="font-mono text-sm">${(Number(inv.tax ?? inv.taxTotal) || 0).toFixed(2)}</span>
                  </div>
                  <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200 mt-2 mb-2">
                      <span className="text-sm font-black uppercase tracking-widest text-slate-800">Final Total Map</span>
@@ -212,11 +213,11 @@ const InvoiceDetail = () => {
                  </div>
                  <div className="flex justify-between items-center text-slate-600 px-2 border-b border-slate-200 pb-3">
                      <span className="text-xs font-bold tracking-widest uppercase">Cleared Amount</span>
-                     <span className="font-mono text-sm text-green-600 font-bold">-${(inv.amountPaid || 0).toFixed(2)}</span>
+                     <span className="font-mono text-sm text-green-600 font-bold">-${clearedTotal.toFixed(2)}</span>
                  </div>
                  <div className="flex justify-between items-center text-slate-900 px-2">
                      <span className="text-base font-black">Remaining Balance</span>
-                     <span className="font-mono text-base font-black">${((inv.total || 0) - (inv.amountPaid || 0)).toFixed(2)}</span>
+                     <span className="font-mono text-base font-black">${((Number(inv.total) || 0) - clearedTotal).toFixed(2)}</span>
                  </div>
              </div>
         </div>
@@ -228,14 +229,14 @@ const InvoiceDetail = () => {
                    <Clock className="w-4 h-4 text-emerald-500" /> Transaction Execution Histories
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                   {payments.map(p => (
+                   {payments.map((p) => (
                        <div key={p.id} className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-4 flex justify-between items-center">
                            <div>
-                               <p className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded inline-block mb-2 uppercase tracking-tight">{p.method}</p>
-                               <p className="text-[10px] text-slate-500 font-medium">Logged on {p.date}</p>
-                               <p className="text-xs text-slate-400 font-mono mt-0.5">{p.paymentNumber}</p>
+                               <p className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded inline-block mb-2 uppercase tracking-tight">{p.paymentMethod}</p>
+                               <p className="text-[10px] text-slate-500 font-medium">Logged on {p.paymentDate}</p>
+                               <p className="text-xs text-slate-400 font-mono mt-0.5">{String(p.id).slice(0, 8)}</p>
                            </div>
-                           <span className="text-lg font-black font-mono text-emerald-600 tracking-tighter">${p.amount.toFixed(2)}</span>
+                           <span className="text-lg font-black font-mono text-emerald-600 tracking-tighter">${Number(p.amount).toFixed(2)}</span>
                        </div>
                    ))}
                 </div>
@@ -245,15 +246,27 @@ const InvoiceDetail = () => {
       </div>
 
       <div className="flex justify-end gap-4 mt-6 print:hidden">
-          <ActionButtons />
+          {canWrite ? (
+            <ActionButtons />
+          ) : inv.status === 'confirmed' ? (
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-sm font-bold flex items-center gap-2 transition-all"
+            >
+              <Printer className="w-4 h-4 text-slate-400" /> Print PDF
+            </button>
+          ) : null}
       </div>
 
+      {canWrite && (
       <PaymentModal 
          isOpen={isPaymentModalOpen} 
          onClose={() => setIsPaymentModalOpen(false)} 
          onSave={handleRecordPayment} 
          invoice={inv} 
       />
+      )}
 
     </div>
   );

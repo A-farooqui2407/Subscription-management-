@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, normalizeRole } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { usersApi } from '../api/users';
 import UserModal from '../components/UserModal';
@@ -9,8 +9,15 @@ import EmptyState from '../components/EmptyState';
 import Spinner from '../components/Spinner';
 import { Search, Edit2, Trash2, Filter, Users as UsersIcon } from 'lucide-react';
 
+/** UI filter / form slugs → Sequelize ENUM */
+function uiRoleToApi(roleUi) {
+  if (roleUi === 'internalUser') return 'InternalUser';
+  if (roleUi === 'admin') return 'Admin';
+  return 'PortalUser';
+}
+
 const Users = () => {
-  const { role } = useAuth();
+  const { isAdmin } = useAuth();
   const toast = useToast();
   
   const [data, setData] = useState([]);
@@ -33,15 +40,17 @@ const Users = () => {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await usersApi.getUsers({ search, role: roleFilter, page, limit });
-      setData(res.data);
-      setTotal(res.total);
+      const role =
+        roleFilter === '' ? undefined : uiRoleToApi(roleFilter);
+      const { rows, meta } = await usersApi.getUsers({ search, role, page, limit });
+      setData(rows);
+      setTotal(meta.total ?? 0);
     } catch (e) {
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
-  }, [search, roleFilter, page, limit, toast]);
+  }, [search, roleFilter, page, limit]);
 
   useEffect(() => {
     fetchUsers();
@@ -49,18 +58,40 @@ const Users = () => {
 
   // Handlers
   const handleSave = async (userData) => {
+    const editingIsAdmin = editingUser && normalizeRole(editingUser.role) === 'admin';
     try {
       if (editingUser) {
-        await usersApi.updateUser(editingUser.id, userData);
+        const patch = {
+          name: userData.name,
+          email: userData.email,
+        };
+        if (!editingIsAdmin) {
+          patch.role = uiRoleToApi(userData.role);
+        }
+        await usersApi.updateUser(editingUser.id, patch);
         toast.success("User updated successfully");
       } else {
-        await usersApi.createUser(userData);
+        const apiRole = uiRoleToApi(userData.role);
+        if (apiRole === 'Admin') {
+          toast.error('Administrator accounts cannot be created from the app.');
+          return;
+        }
+        await usersApi.createUser({
+          name: userData.name,
+          email: userData.email,
+          password: userData.password,
+          role: apiRole,
+        });
         toast.success("User created successfully");
       }
       setIsModalOpen(false);
       fetchUsers();
     } catch (e) {
-      toast.error("An error occurred preserving the user");
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Could not save user.';
+      toast.error(msg);
     }
   };
 
@@ -111,7 +142,7 @@ const Users = () => {
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">User Management</h1>
           <p className="mt-1 text-slate-500">Manage internal teammates and client portal assignments.</p>
         </div>
-        {role === 'admin' && (
+        {isAdmin && (
           <button 
             onClick={openCreate}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-blue-500/50"
@@ -178,14 +209,20 @@ const Users = () => {
                   <tr key={u.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="p-4 pl-6 font-bold text-slate-800">{u.name}</td>
                     <td className="p-4 text-slate-600 text-sm">{u.email}</td>
-                    <td className="p-4"><RoleBadge r={u.role} /></td>
+                    <td className="p-4"><RoleBadge r={normalizeRole(u.role)} /></td>
                     <td className="p-4 pr-6 text-right space-x-2">
-                       <button onClick={() => openEdit(u)} className="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Edit2 className="w-4 h-4" />
-                       </button>
-                       <button onClick={() => openDelete(u.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Trash2 className="w-4 h-4" />
-                       </button>
+                       {isAdmin ? (
+                         <>
+                           <button type="button" onClick={() => openEdit(u)} className="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Edit2 className="w-4 h-4" />
+                           </button>
+                           <button type="button" onClick={() => openDelete(u.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Trash2 className="w-4 h-4" />
+                           </button>
+                         </>
+                       ) : (
+                         <span className="text-xs text-slate-400 font-medium">View only</span>
+                       )}
                     </td>
                   </tr>
                 ))}
@@ -198,11 +235,12 @@ const Users = () => {
         )}
       </div>
 
-      <UserModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSave={handleSave} 
-        userToEdit={editingUser} 
+      <UserModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSave}
+        userToEdit={editingUser}
+        editingIsAdmin={Boolean(editingUser && normalizeRole(editingUser.role) === 'admin')}
       />
 
       <ConfirmDialog 

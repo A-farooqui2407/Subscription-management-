@@ -44,10 +44,10 @@ const Signup = () => {
     }
     setIsLoading(true);
     try {
-      const data = await authApi.signup(name, email, password);
-      // Automatically login post-signup
-      login(data.user, data.token);
-      toast.success(data.message || 'Account created successfully!');
+      await authApi.signup(name, email, password);
+      const session = await authApi.login(email, password);
+      login(session.user, session.token);
+      toast.success('Account created successfully!');
       navigate('/dashboard');
     } catch (error) {
       toast.error(error.message || 'Error creating account');
@@ -69,6 +69,10 @@ const Signup = () => {
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-white tracking-tight">Create Account</h2>
           <p className="text-slate-400 mt-2 text-sm font-medium">Join us and manage everything easily</p>
+          <p className="text-slate-500 mt-3 text-xs leading-relaxed max-w-sm mx-auto">
+            Public sign up creates a <span className="text-slate-400 font-semibold">portal</span> account only.
+            Staff accounts are created by an administrator.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

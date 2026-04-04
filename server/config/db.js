@@ -48,10 +48,50 @@ function createSequelize() {
 const sequelize = createSequelize();
 
 /**
- * Test database connectivity (optional health check).
+ * Tables expected after `npm run migrate` (no runtime sync — schema is migration-driven).
+ */
+const REQUIRED_TABLES = [
+  'users',
+  'contacts',
+  'products',
+  'variants',
+  'taxes',
+  'discounts',
+  'plans',
+  'quotation_templates',
+  'subscriptions',
+  'order_lines',
+  'invoices',
+  'payments',
+];
+
+/**
+ * Ensure core application tables exist (PostgreSQL).
+ */
+async function verifyRequiredTables() {
+  if (sequelize.getDialect() !== 'postgres') {
+    return;
+  }
+  const [rows] = await sequelize.query(
+    `SELECT tablename AS name FROM pg_catalog.pg_tables WHERE schemaname = 'public'`
+  );
+  const present = new Set(rows.map((r) => r.name));
+  const missing = REQUIRED_TABLES.filter((t) => !present.has(t));
+  if (missing.length > 0) {
+    const err = new Error(
+      `Schema incomplete — missing table(s): ${missing.join(', ')}. Run: npm run migrate`
+    );
+    err.code = 'SCHEMA_INCOMPLETE';
+    throw err;
+  }
+}
+
+/**
+ * Authenticate and verify schema. Used at startup and for /health.
  */
 async function testConnection() {
   await sequelize.authenticate();
+  await verifyRequiredTables();
 }
 
-module.exports = { sequelize, testConnection };
+module.exports = { sequelize, testConnection, verifyRequiredTables };

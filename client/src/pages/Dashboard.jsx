@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { dashboardApi } from '../api/dashboard';
-import { contactsApi } from '../api/contacts';
 import Spinner from '../components/Spinner';
 import { Activity, CreditCard, Receipt, Repeat, WalletCards, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -19,39 +18,33 @@ const MetricCard = ({ title, value, icon: Icon, color, isCurrency = false }) => 
     </div>
 );
 
+function customerNameFromOverdue(inv) {
+  return inv.subscription?.customer?.name || 'Client Unknown';
+}
+
 const Dashboard = () => {
-  const [metrics, setMetrics] = useState(null);
-  const [activity, setActivity] = useState(null);
-  const [contactsDict, setContactsDict] = useState({});
+  const [payload, setPayload] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDash = async () => {
-        try {
-            const [mRes, aRes, cRes] = await Promise.all([
-                dashboardApi.getOverviewMetrics(),
-                dashboardApi.getRecentActivity(),
-                contactsApi.getContacts()
-            ]);
-            
-            setMetrics(mRes);
-            setActivity(aRes);
-            
-            const cDict = {};
-            (cRes.data || cRes).forEach(c => { cDict[c.id] = c.name });
-            setContactsDict(cDict);
-            
-        } catch (e) {
-            console.error("Dashboard metric resolution failure", e);
-        } finally {
-            setLoading(false);
-        }
+    const run = async () => {
+      try {
+        const data = await dashboardApi.getDashboard();
+        setPayload(data);
+      } catch (e) {
+        console.error('Dashboard load failed', e);
+        setPayload(null);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchDash();
+    run();
   }, []);
 
   if (loading) return <div className="h-full flex justify-center items-center"><Spinner size="lg" color="indigo" /></div>;
-  if (!metrics) return null;
+  if (!payload?.kpis) return null;
+
+  const { kpis, recentSubscriptions = [], recentPayments = [], overdueInvoicesList = [] } = payload;
 
   return (
     <div className="space-y-8">
@@ -63,37 +56,35 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MetricCard 
-             title="Active Subs." 
-             value={metrics.activeSubscriptions} 
-             icon={Repeat} 
-             color="bg-indigo-50 text-indigo-600 border-indigo-100" 
+          <MetricCard
+             title="Active Subs."
+             value={kpis.activeSubscriptions}
+             icon={Repeat}
+             color="bg-indigo-50 text-indigo-600 border-indigo-100"
           />
-          <MetricCard 
-             title="Overall Revenue" 
-             value={metrics.totalRevenue} 
-             icon={WalletCards} 
-             color="bg-green-50 text-green-600 border-green-100" 
-             isCurrency 
+          <MetricCard
+             title="Revenue (30d)"
+             value={kpis.totalRevenue}
+             icon={WalletCards}
+             color="bg-green-50 text-green-600 border-green-100"
+             isCurrency
           />
-          <MetricCard 
-             title="Pending Accounts" 
-             value={metrics.pendingPaymentsAmount} 
-             icon={CreditCard} 
-             color="bg-orange-50 text-orange-600 border-orange-100" 
-             isCurrency 
+          <MetricCard
+             title="Confirmed Invoices"
+             value={kpis.pendingPayments}
+             icon={CreditCard}
+             color="bg-orange-50 text-orange-600 border-orange-100"
           />
-          <MetricCard 
-             title="Overdue Invoice" 
-             value={metrics.overdueInvoicesCount} 
-             icon={AlertTriangle} 
-             color="bg-red-50 text-red-600 border-red-200 shadow-inner" 
+          <MetricCard
+             title="Overdue Invoice"
+             value={kpis.overdueInvoices}
+             icon={AlertTriangle}
+             color="bg-red-50 text-red-600 border-red-200 shadow-inner"
           />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Overdue Invoices Critical Panel */}
+
           <div className="lg:col-span-2 bg-white border border-red-200 rounded-3xl overflow-hidden shadow-sm shadow-red-100/50">
              <div className="bg-red-50 p-5 border-b border-red-100 flex justify-between items-center">
                  <h3 className="font-extrabold text-red-800 flex items-center gap-2">
@@ -104,20 +95,20 @@ const Dashboard = () => {
                      View All <ArrowRight className="w-4 h-4" />
                  </Link>
              </div>
-             {activity.overdueInvoices?.length === 0 ? (
+             {overdueInvoicesList.length === 0 ? (
                  <div className="p-8 text-center text-sm font-bold text-red-400">Zero Overdue Records Assessed Globally</div>
              ) : (
                  <div className="overflow-x-auto">
                      <table className="w-full text-left">
                          <tbody className="divide-y divide-red-50/50">
-                             {activity.overdueInvoices?.map(inv => (
+                             {overdueInvoicesList.map((inv) => (
                                  <tr key={inv.id} className="hover:bg-red-50/20 transition-colors">
                                      <td className="p-4 pl-6">
                                          <Link to={`/invoices/${inv.id}`} className="font-bold text-slate-800 hover:text-red-600">{inv.invoiceNumber}</Link>
                                      </td>
-                                     <td className="p-4 text-sm font-medium text-slate-600">{contactsDict[inv.customerId] || 'Client Unknown'}</td>
+                                     <td className="p-4 text-sm font-medium text-slate-600">{customerNameFromOverdue(inv)}</td>
                                      <td className="p-4 text-sm text-center font-bold text-red-500">Due: {inv.dueDate}</td>
-                                     <td className="p-4 pr-6 text-right font-black font-mono text-slate-800">${(inv.total || 0).toFixed(2)}</td>
+                                     <td className="p-4 pr-6 text-right font-black font-mono text-slate-800">${(Number(inv.total) || 0).toFixed(2)}</td>
                                  </tr>
                              ))}
                          </tbody>
@@ -126,8 +117,6 @@ const Dashboard = () => {
              )}
           </div>
 
-
-          {/* Recent Subscriptions */}
           <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                  <h3 className="font-extrabold text-slate-800 flex items-center gap-2">
@@ -138,19 +127,19 @@ const Dashboard = () => {
                      See Array <ArrowRight className="w-4 h-4" />
                  </Link>
              </div>
-             {activity.recentSubscriptions?.length === 0 ? (
+             {recentSubscriptions.length === 0 ? (
                  <div className="p-8 text-center text-sm font-medium text-slate-400">No Subscriptions Found</div>
              ) : (
                  <div className="overflow-x-auto">
                      <table className="w-full text-left">
                          <tbody className="divide-y divide-slate-100">
-                             {activity.recentSubscriptions?.map(sub => (
+                             {recentSubscriptions.map((sub) => (
                                  <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
                                      <td className="p-4 pl-6">
-                                         <Link to={`/subscriptions/${sub.id}`} className="font-bold text-slate-800 hover:text-indigo-600">{sub.subNumber}</Link>
+                                         <Link to={`/subscriptions/${sub.id}`} className="font-bold text-slate-800 hover:text-indigo-600">{sub.subscriptionNumber}</Link>
                                      </td>
-                                     <td className="p-4 text-sm font-medium text-slate-600">{contactsDict[sub.customerId] || 'Client Unknown'}</td>
-                                     <td className="p-4 pr-6 text-right font-black font-mono text-indigo-600">${(sub.total || 0).toFixed(2)}</td>
+                                     <td className="p-4 text-sm font-medium text-slate-600">{sub.customer?.name || 'Client Unknown'}</td>
+                                     <td className="p-4 pr-6 text-right font-black font-mono text-indigo-600">${(Number(sub.total) || 0).toFixed(2)}</td>
                                  </tr>
                              ))}
                          </tbody>
@@ -159,7 +148,6 @@ const Dashboard = () => {
              )}
           </div>
 
-          {/* Recent Payments */}
           <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                  <h3 className="font-extrabold text-slate-800 flex items-center gap-2">
@@ -170,19 +158,21 @@ const Dashboard = () => {
                      All Ledgers <ArrowRight className="w-4 h-4" />
                  </Link>
              </div>
-             {activity.recentPayments?.length === 0 ? (
+             {recentPayments.length === 0 ? (
                  <div className="p-8 text-center text-sm font-medium text-slate-400">No Payment Volumes Configured</div>
              ) : (
                  <div className="overflow-x-auto">
                      <table className="w-full text-left">
                          <tbody className="divide-y divide-slate-100">
-                             {activity.recentPayments?.map(p => (
+                             {recentPayments.map((p) => (
                                  <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
                                      <td className="p-4 pl-6">
-                                         <Link to={`/invoices/${p.invoiceId}`} className="font-bold text-slate-800 hover:text-emerald-600">{p.paymentNumber}</Link>
+                                         <Link to={`/invoices/${p.invoiceId}`} className="font-bold text-slate-800 hover:text-emerald-600">
+                                           {p.invoice?.invoiceNumber || `Payment ${String(p.id).slice(0, 8)}`}
+                                         </Link>
                                      </td>
-                                     <td className="p-4 text-xs font-bold"><span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-600 uppercase tracking-widest">{p.method}</span></td>
-                                     <td className="p-4 pr-6 text-right font-black font-mono text-emerald-600">${(p.amount || 0).toFixed(2)}</td>
+                                     <td className="p-4 text-xs font-bold"><span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-600 uppercase tracking-widest">{p.paymentMethod}</span></td>
+                                     <td className="p-4 pr-6 text-right font-black font-mono text-emerald-600">${(Number(p.amount) || 0).toFixed(2)}</td>
                                  </tr>
                              ))}
                          </tbody>

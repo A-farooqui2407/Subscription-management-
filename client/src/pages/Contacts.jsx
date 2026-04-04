@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { contactsApi } from '../api/contacts';
 import ContactModal from '../components/ContactModal';
@@ -9,6 +10,7 @@ import Spinner from '../components/Spinner';
 import { Search, Edit2, Trash2, Filter, Contact } from 'lucide-react';
 
 const Contacts = () => {
+  const { canWrite } = useAuth();
   const toast = useToast();
   
   const [data, setData] = useState([]);
@@ -31,15 +33,15 @@ const Contacts = () => {
   const fetchContacts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await contactsApi.getContacts({ search, type: typeFilter, page, limit });
-      setData(res.data);
-      setTotal(res.total);
+      const { rows, meta } = await contactsApi.getContacts({ search, type: typeFilter, page, limit });
+      setData(rows);
+      setTotal(meta.total ?? 0);
     } catch (e) {
       toast.error('Failed to load contacts');
     } finally {
       setLoading(false);
     }
-  }, [search, typeFilter, page, limit, toast]);
+  }, [search, typeFilter, page, limit]);
 
   useEffect(() => {
     fetchContacts();
@@ -111,12 +113,14 @@ const Contacts = () => {
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Contact CRM Directory</h1>
           <p className="mt-1 text-slate-500">Pipeline assignments and external relationships mapped contextually.</p>
         </div>
+        {canWrite && (
         <button 
           onClick={openCreate}
           className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-emerald-500/50"
         >
           Add Contact
         </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -181,12 +185,18 @@ const Contacts = () => {
                     <td className="p-4 text-slate-500 text-sm font-mono">{c.phone || '-'}</td>
                     <td className="p-4"><TypeBadge type={c.type} /></td>
                     <td className="p-4 pr-6 text-right space-x-2">
-                       <button onClick={() => openEdit(c)} className="p-2 text-slate-400 hover:text-emerald-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Edit2 className="w-4 h-4" />
-                       </button>
-                       <button onClick={() => openDelete(c.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Trash2 className="w-4 h-4" />
-                       </button>
+                       {canWrite ? (
+                         <>
+                           <button type="button" onClick={() => openEdit(c)} className="p-2 text-slate-400 hover:text-emerald-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Edit2 className="w-4 h-4" />
+                           </button>
+                           <button type="button" onClick={() => openDelete(c.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Trash2 className="w-4 h-4" />
+                           </button>
+                         </>
+                       ) : (
+                         <span className="text-xs text-slate-400">View only</span>
+                       )}
                     </td>
                   </tr>
                 ))}

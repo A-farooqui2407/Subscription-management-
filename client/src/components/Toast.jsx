@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useId } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -10,6 +10,10 @@ export const useToast = () => useContext(ToastContext);
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   const addToast = useCallback((message, type = 'info', duration = 3000) => {
     const id = Date.now().toString();
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -19,18 +23,17 @@ export const ToastProvider = ({ children }) => {
         removeToast(id);
       }, duration);
     }
-  }, []);
+  }, [removeToast]);
 
-  const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
-
-  const toast = {
-    success: (msg, dur) => addToast(msg, 'success', dur),
-    error: (msg, dur) => addToast(msg, 'error', dur),
-    warning: (msg, dur) => addToast(msg, 'warning', dur),
-    info: (msg, dur) => addToast(msg, 'info', dur),
-  };
+  const toast = useMemo(
+    () => ({
+      success: (msg, dur) => addToast(msg, 'success', dur),
+      error: (msg, dur) => addToast(msg, 'error', dur),
+      warning: (msg, dur) => addToast(msg, 'warning', dur),
+      info: (msg, dur) => addToast(msg, 'info', dur),
+    }),
+    [addToast]
+  );
 
   return (
     <ToastContext.Provider value={toast}>

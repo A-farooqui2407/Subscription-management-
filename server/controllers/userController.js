@@ -47,6 +47,8 @@ const getUserById = asyncHandler(async (req, res) => {
   return res.success(toPublicUser(user), 'Success', 200);
 });
 
+const ASSIGNABLE_ROLES = ['InternalUser', 'PortalUser'];
+
 const createInternalUser = asyncHandler(async (req, res) => {
   const { name, email, password, role } = req.body;
 
@@ -54,8 +56,8 @@ const createInternalUser = asyncHandler(async (req, res) => {
     return res.error('Name, email, password, and role are required', 400);
   }
 
-  if (role !== 'InternalUser') {
-    return res.error('Role must be InternalUser', 400);
+  if (!ASSIGNABLE_ROLES.includes(role)) {
+    return res.error('Invalid role. Admins cannot be created via the API.', 400);
   }
 
   const pwdErrs = validatePasswordRules(password);
@@ -73,10 +75,15 @@ const createInternalUser = asyncHandler(async (req, res) => {
     name: String(name).trim(),
     email: normalizedEmail,
     password,
-    role: 'InternalUser',
+    role,
   });
 
-  await sendWelcomeEmail(user.email, user.name, password);
+  try {
+    await sendWelcomeEmail(user.email, user.name, password);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[users] Welcome email failed (user was still created):', err.message);
+  }
 
   return res.success(toPublicUser(user), 'User created', 201);
 });
@@ -106,7 +113,13 @@ const updateUser = asyncHandler(async (req, res) => {
     user.name = String(name).trim();
   }
   if (role !== undefined) {
-    if (!ROLES.includes(role)) {
+    if (user.role === 'Admin') {
+      return res.error('Administrator role cannot be changed from the application', 400);
+    }
+    if (role === 'Admin') {
+      return res.error('Cannot assign administrator role via the application', 400);
+    }
+    if (!ASSIGNABLE_ROLES.includes(role)) {
       return res.error('Invalid role', 400);
     }
     user.role = role;

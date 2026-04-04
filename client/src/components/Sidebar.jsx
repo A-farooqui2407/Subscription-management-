@@ -3,19 +3,20 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Users, Contact, Box, Tags, Repeat, Receipt, CreditCard, Percent, FileText, ClipboardList, Pin, PinOff, LogOut, UserCircle } from 'lucide-react';
 
+/** Portal (`user`) sees the same nav as staff; pages hide writes when !canWrite */
 const allNavItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user', 'internalUser'] },
-  { path: '/reports', label: 'Reports', icon: FileText, roles: ['admin', 'internalUser'] },
-  { path: '/users', label: 'Users', icon: Users, roles: ['admin'] },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'internalUser', 'user'] },
+  { path: '/reports', label: 'Reports', icon: FileText, roles: ['admin', 'internalUser', 'user'] },
+  { path: '/users', label: 'Users', icon: Users, roles: ['admin', 'internalUser', 'user'] },
   { path: '/contacts', label: 'Contacts', icon: Contact, roles: ['admin', 'internalUser', 'user'] },
-  { path: '/products', label: 'Products', icon: Box, roles: ['admin'] },
-  { path: '/plans', label: 'Plans', icon: Tags, roles: ['admin'] },
-  { path: '/quotation-templates', label: 'Templates', icon: ClipboardList, roles: ['admin'] },
-  { path: '/subscriptions', label: 'Subscriptions', icon: Repeat, roles: ['admin', 'user', 'internalUser'] },
-  { path: '/discounts', label: 'Discounts', icon: Percent, roles: ['admin'] },
-  { path: '/taxes', label: 'Taxes', icon: FileText, roles: ['admin'] },
-  { path: '/invoices', label: 'Invoices', icon: Receipt, roles: ['admin', 'user', 'internalUser'] },
-  { path: '/payments', label: 'Payments', icon: CreditCard, roles: ['admin', 'user', 'internalUser'] },
+  { path: '/products', label: 'Products', icon: Box, roles: ['admin', 'internalUser', 'user'] },
+  { path: '/plans', label: 'Plans', icon: Tags, roles: ['admin', 'internalUser', 'user'] },
+  { path: '/quotation-templates', label: 'Templates', icon: ClipboardList, roles: ['admin', 'internalUser', 'user'] },
+  { path: '/subscriptions', label: 'Subscriptions', icon: Repeat, roles: ['admin', 'internalUser', 'user'] },
+  { path: '/discounts', label: 'Discounts', icon: Percent, roles: ['admin', 'internalUser', 'user'] },
+  { path: '/taxes', label: 'Taxes', icon: FileText, roles: ['admin', 'internalUser', 'user'] },
+  { path: '/invoices', label: 'Invoices', icon: Receipt, roles: ['admin', 'internalUser', 'user'] },
+  { path: '/payments', label: 'Payments', icon: CreditCard, roles: ['admin', 'internalUser', 'user'] },
 ];
 
 const Sidebar = ({ isPinned, setIsPinned }) => {
@@ -97,7 +98,9 @@ const Sidebar = ({ isPinned, setIsPinned }) => {
              <UserCircle size={20} className={`flex-shrink-0 ${isExpanded ? 'text-indigo-400' : 'text-slate-400'}`} />
              
              <div className={`flex items-center justify-between flex-1 transition-opacity duration-200 whitespace-nowrap overflow-hidden ${isExpanded ? 'opacity-100 max-w-full' : 'opacity-0 max-w-0'}`}>
-                 <span className="text-xs font-bold text-slate-300 tracking-wider">{(role || 'User').toUpperCase()}</span>
+                 <span className="text-xs font-bold text-slate-300 tracking-wider">
+                   {(role === 'user' ? 'Portal' : role || 'User').toString().toUpperCase()}
+                 </span>
                  <button onClick={handleLogout} title="Logout" className="text-slate-500 hover:text-red-400 transition-colors p-1 bg-slate-800 rounded-md hover:bg-slate-700">
                      <LogOut size={14} />
                  </button>

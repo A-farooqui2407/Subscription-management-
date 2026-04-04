@@ -20,28 +20,42 @@ function skipDbCheck() {
   return v === 'true' || v === '1' || v === 'yes';
 }
 
-async function start() {
-  if (skipDbCheck()) {
-    // eslint-disable-next-line no-console
-    console.log('[demo] SKIP_DB_CHECK is set — PostgreSQL not checked at startup.');
-  } else {
-    try {
-      await testConnection();
-      // eslint-disable-next-line no-console
-      console.log('Database connection OK');
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Database connection failed:', err.message);
-      if (process.env.NODE_ENV === 'production') {
-        process.exit(1);
-      }
-    }
-  }
-
+function listen() {
   app.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Server listening on port ${PORT}`);
   });
+}
+
+async function start() {
+  if (skipDbCheck()) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[SKIP_DB_CHECK] Starting without PostgreSQL verification — not recommended for real use.'
+    );
+    listen();
+    return;
+  }
+
+  try {
+    await testConnection();
+    // eslint-disable-next-line no-console
+    console.log('Database connected successfully');
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Database connection failed:', err.message);
+    if (err.code) {
+      // eslint-disable-next-line no-console
+      console.error('Database error code:', err.code);
+    }
+    if (process.env.NODE_ENV !== 'production' && err.stack) {
+      // eslint-disable-next-line no-console
+      console.error(err.stack);
+    }
+    process.exit(1);
+  }
+
+  listen();
 }
 
 start().catch((err) => {

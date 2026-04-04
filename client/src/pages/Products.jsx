@@ -11,8 +11,7 @@ import { Search, Edit2, Trash2, Filter, Box, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Products = () => {
-  const { role } = useAuth();
-  const isAdmin = role === 'admin';
+  const { isAdmin } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   
@@ -36,15 +35,15 @@ const Products = () => {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await productsApi.getProducts({ search, type: typeFilter, page, limit });
-      setData(res.data);
-      setTotal(res.total);
+      const { rows, meta } = await productsApi.getProducts({ search, type: typeFilter, page, limit });
+      setData(rows);
+      setTotal(meta.total ?? 0);
     } catch (e) {
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
-  }, [search, typeFilter, page, limit, toast]);
+  }, [search, typeFilter, page, limit]);
 
   useEffect(() => {
     fetchProducts();

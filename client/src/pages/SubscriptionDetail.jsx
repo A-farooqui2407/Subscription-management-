@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { subscriptionsApi } from '../api/subscriptions';
 import { contactsApi } from '../api/contacts';
@@ -13,6 +14,7 @@ import { ArrowLeft, Repeat, CheckCircle, Send, Play, XSquare, FileText, Percent 
 
 const SubscriptionDetail = () => {
   const { id } = useParams();
+  const { canWrite } = useAuth();
   const toast = useToast();
   
   const [sub, setSub] = useState(null);
@@ -32,32 +34,43 @@ const SubscriptionDetail = () => {
     try {
       const data = await subscriptionsApi.getSubscriptionById(id);
       setSub(data);
-      
-      const [cRes, pRes, prRes, tRes, dRes] = await Promise.all([
-          contactsApi.getContacts(),
-          plansApi.getPlans(),
-          productsApi.getProducts(),
-          taxesApi.getTaxes(),
-          discountsApi.getDiscounts()
-      ]);
-      
-      const cDict = {}; (cRes.data || cRes).forEach(c => cDict[c.id] = c.name); setContactsDict(cDict);
-      const pDict = {}; pRes.forEach(p => pDict[p.id] = p.name); setPlansDict(pDict);
-      const dDict = {}; dRes.forEach(d => dDict[d.id] = d); setDiscountMap(dDict);
-      
-      setProducts(prRes.data || prRes);
-      setTaxes(tRes);
 
+      const [cRes, pRes, prRes, tRes, dRes] = await Promise.all([
+        contactsApi.getContacts({ limit: 100, page: 1 }),
+        plansApi.getPlans({ limit: 100, page: 1 }),
+        productsApi.getProducts({ limit: 100, page: 1 }),
+        taxesApi.getTaxes(),
+        discountsApi.getDiscounts({ limit: 100, page: 1 }),
+      ]);
+
+      const cDict = {};
+      cRes.rows.forEach((c) => {
+        cDict[c.id] = c.name;
+      });
+      setContactsDict(cDict);
+      const pDict = {};
+      pRes.rows.forEach((p) => {
+        pDict[p.id] = p.name;
+      });
+      setPlansDict(pDict);
+      const dDict = {};
+      dRes.rows.forEach((d) => {
+        dDict[d.id] = d;
+      });
+      setDiscountMap(dDict);
+
+      setProducts(prRes.rows);
+      setTaxes(Array.isArray(tRes) ? tRes : []);
     } catch (e) {
-        if(e.message === "Subscription not found"){
-            toast.error("This subscription pointer is permanently detached.");
-        }else{
-            toast.error('Critical failure mapping detail payload dependencies.');
-        }
+      if (e.message === 'Subscription not found') {
+        toast.error('This subscription pointer is permanently detached.');
+      } else {
+        toast.error('Critical failure mapping detail payload dependencies.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [id, toast]);
+  }, [id]);
 
   useEffect(() => {
     fetchDetail();
@@ -148,7 +161,7 @@ const SubscriptionDetail = () => {
               </div>
               <div>
                   <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-4">
-                      {sub.subNumber} 
+                      {sub.subscriptionNumber} 
                   </h1>
                   <div className="flex items-center gap-3 mt-3 text-sm text-slate-500 font-medium">
                       <StatusBadge status={sub.status} />
@@ -157,7 +170,7 @@ const SubscriptionDetail = () => {
            </div>
            
            <div className="flex gap-4 items-center md:pr-4">
-              <StatusActionButton />
+              {canWrite ? <StatusActionButton /> : null}
            </div>
         </div>
       </div>

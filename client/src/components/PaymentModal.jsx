@@ -8,7 +8,10 @@ const PaymentModal = ({ isOpen, onClose, onSave, invoice }) => {
     date: ''
   });
 
-  const remainingBalance = invoice ? (invoice.total - (invoice.amountPaid || 0)).toFixed(2) : 0;
+  const paidSoFar =
+    (invoice?.payments && invoice.payments.reduce((s, p) => s + Number(p.amount || 0), 0)) ||
+    Number(invoice?.amountPaid || 0);
+  const remainingBalance = invoice ? (Number(invoice.total) - paidSoFar).toFixed(2) : 0;
 
   useEffect(() => {
     if (isOpen && invoice) {

@@ -20,7 +20,7 @@ const Navbar = () => {
               {user?.name || user?.email?.split('@')[0] || 'User'}
             </span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              {role || 'User'}
+              {role === 'user' ? 'Portal' : role || 'User'}
             </span>
           </div>
         </div>

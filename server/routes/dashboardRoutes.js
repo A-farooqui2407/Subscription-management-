@@ -13,7 +13,7 @@ router.get('/', asyncHandler(verifyToken), dashboardController.getDashboardKPIs)
 router.get(
   '/reports',
   asyncHandler(verifyToken),
-  checkRole('Admin', 'InternalUser'),
+  checkRole('Admin', 'InternalUser', 'PortalUser'),
   dashboardController.getReports
 );
 

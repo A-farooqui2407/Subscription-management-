@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { discountsApi } from '../api/discounts';
 import DiscountModal from '../components/DiscountModal';
@@ -8,6 +9,7 @@ import EmptyState from '../components/EmptyState';
 import { Percent, Edit2, Trash2, Filter } from 'lucide-react';
 
 const Discounts = () => {
+  const { isAdmin } = useAuth();
   const toast = useToast();
   
   const [data, setData] = useState([]);
@@ -27,14 +29,19 @@ const Discounts = () => {
   const fetchDiscounts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await discountsApi.getDiscounts({ appliesTo: appliesFilter, isActive: isActiveFilter });
-      setData(res);
+      const appliesMap = { Subscriptions: 'subscriptions', Products: 'products', Both: '' };
+      const appliesTo = appliesMap[appliesFilter] ?? appliesFilter;
+      const { rows } = await discountsApi.getDiscounts({
+        ...(appliesTo ? { appliesTo } : {}),
+        ...(isActiveFilter !== '' ? { isActive: isActiveFilter } : {}),
+      });
+      setData(rows);
     } catch (e) {
       toast.error('Failed to load discounts mapping pipeline');
     } finally {
       setLoading(false);
     }
-  }, [appliesFilter, isActiveFilter, toast]);
+  }, [appliesFilter, isActiveFilter]);
 
   useEffect(() => {
     fetchDiscounts();
@@ -106,12 +113,14 @@ const Discounts = () => {
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Active Promotions</h1>
           <p className="mt-1 text-slate-500">Monitor and calculate discount reductions targeting checkouts dynamically.</p>
         </div>
+        {isAdmin && (
         <button 
           onClick={openCreate}
           className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-orange-500/50"
         >
           Add Discount
         </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -205,10 +214,11 @@ const Discounts = () => {
                         </div>
                     </td>
                     <td className="p-4 text-center">
-                      <label className="relative inline-flex items-center cursor-pointer">
+                      <label className={`relative inline-flex items-center ${isAdmin ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                         <input 
                            type="checkbox" 
                            className="sr-only peer" 
+                           disabled={!isAdmin}
                            checked={d.isActive}
                            onChange={(e) => inlineToggleActive(d, e.target.checked)} 
                         />
@@ -216,12 +226,18 @@ const Discounts = () => {
                       </label>
                     </td>
                     <td className="p-4 pr-6 text-right space-x-2">
-                       <button onClick={() => openEdit(d)} className="p-2 text-slate-400 hover:text-orange-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Edit2 className="w-4 h-4" />
-                       </button>
-                       <button onClick={() => openDelete(d.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
-                          <Trash2 className="w-4 h-4" />
-                       </button>
+                       {isAdmin ? (
+                         <>
+                           <button type="button" onClick={() => openEdit(d)} className="p-2 text-slate-400 hover:text-orange-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Edit2 className="w-4 h-4" />
+                           </button>
+                           <button type="button" onClick={() => openDelete(d.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-all">
+                              <Trash2 className="w-4 h-4" />
+                           </button>
+                         </>
+                       ) : (
+                         <span className="text-xs text-slate-400">View only</span>
+                       )}
                     </td>
                   </tr>
                   )
