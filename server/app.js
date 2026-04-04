@@ -1,7 +1,11 @@
 /**
  * Express application — security headers, CORS, middleware, route mounting, global error handler.
  */
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({
+  path: path.resolve(__dirname, '../.env'),
+  override: true,
+});
 
 require('./models/index');
 
@@ -9,6 +13,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 
+const { sequelize } = require('./config/db');
 const { getCorsOriginOption } = require('./config/validateEnv');
 const { attachResponseHelpers } = require('./utils/responseHelpers');
 const errorHandler = require('./middleware/errorHandler');
@@ -29,6 +34,8 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(
   cors({
@@ -36,13 +43,26 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
 
 // res.success, res.error, res.paginated — available in all downstream handlers
 app.use(attachResponseHelpers);
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+function skipDbCheck() {
+  const v = String(process.env.SKIP_DB_CHECK || '').trim().toLowerCase();
+  return v === 'true' || v === '1' || v === 'yes';
+}
+
+app.get('/health', async (_req, res) => {
+  if (skipDbCheck()) {
+    return res.json({ status: 'ok', db: 'skipped' });
+  }
+  try {
+    await sequelize.authenticate();
+    return res.json({ status: 'ok', db: 'connected' });
+  } catch {
+    return res.status(503).json({ status: 'error', db: 'disconnected' });
+  }
 });
 
 const API = process.env.API_PREFIX || '/api';

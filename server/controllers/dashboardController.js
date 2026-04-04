@@ -12,15 +12,9 @@ const {
 } = require('../models/index');
 const asyncHandler = require('../utils/asyncHandler');
 const { todayDateOnly } = require('../services/invoiceService');
+const { parsePagination } = require('../utils/pagination');
 
 const REPORT_STATUSES = ['draft', 'confirmed', 'paid'];
-
-function parsePagination(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
-  const offset = (page - 1) * limit;
-  return { page, limit, offset };
-}
 
 function buildSubscriptionIncludeForReports(customerId) {
   const customerNested = {

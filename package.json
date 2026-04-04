@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "node --watch server/server.js",
-    "seed": "node server/scripts/seedDemo.js"
+    "seed": "node server/scripts/seedDemo.js",
+    "migrate": "sequelize-cli db:migrate",
+    "migrate:undo": "sequelize-cli db:migrate:undo:all"
   },
   "engines": {
     "node": ">=18"
@@ -23,6 +25,10 @@
     "nodemailer": "^6.9.15",
     "pg": "^8.13.0",
     "pg-hstore": "^2.3.4",
-    "sequelize": "^6.37.3"
+    "sequelize": "^6.37.3",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "sequelize-cli": "^6.6.2"
   }
 }

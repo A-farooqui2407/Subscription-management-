@@ -20,7 +20,7 @@ const Payment = sequelize.define(
       references: { model: 'invoices', key: 'id' },
     },
     paymentMethod: {
-      type: DataTypes.ENUM(...PAYMENT_METHODS),
+      type: DataTypes.ENUM(...PAYMENT_METHODS, 'check', 'other'),
       allowNull: false,
     },
     amount: {

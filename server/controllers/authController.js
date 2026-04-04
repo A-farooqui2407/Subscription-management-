@@ -2,30 +2,17 @@
  * Auth — signup, login, password reset, current user.
  */
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendResetPasswordEmail } = require('../services/emailService');
+const { validatePasswordRules } = require('../utils/passwordPolicy');
 
-function validatePasswordRules(password) {
-  if (typeof password !== 'string') {
-    return 'Password is required';
-  }
-  if (password.length <= 8) {
-    return 'Password must be longer than 8 characters';
-  }
-  if (!/[A-Z]/.test(password)) {
-    return 'Password must contain at least one uppercase letter';
-  }
-  if (!/[a-z]/.test(password)) {
-    return 'Password must contain at least one lowercase letter';
-  }
-  if (!/[^A-Za-z0-9]/.test(password)) {
-    return 'Password must contain at least one special character';
-  }
-  return null;
-}
+/** Fixed bcrypt hash so login timing is similar when email is unknown. */
+const DUMMY_PASSWORD_HASH =
+  '$2b$10$XK0yOWasr8E3GbkOzekPw.eKQ.ALeGcp5d2wuLUg8cEwkc9ZLaPhW';
 
 function hashResetToken(rawToken) {
   return crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -45,9 +32,9 @@ const signup = asyncHandler(async (req, res) => {
     return res.error('Name, email, and password are required', 400);
   }
 
-  const pwdErr = validatePasswordRules(password);
-  if (pwdErr) {
-    return res.error(pwdErr, 400);
+  const pwdErrs = validatePasswordRules(password);
+  if (pwdErrs.length) {
+    return res.error(pwdErrs[0], 400);
   }
 
   const existing = await User.findOne({ where: { email: String(email).trim().toLowerCase() } });
@@ -76,13 +63,11 @@ const login = asyncHandler(async (req, res) => {
     where: { email: String(email).trim().toLowerCase() },
   });
 
-  if (!user) {
-    return res.error('User not found', 404);
-  }
+  const hashToCompare = user ? user.password : DUMMY_PASSWORD_HASH;
+  const match = await bcrypt.compare(String(password), hashToCompare);
 
-  const match = await user.comparePassword(password);
-  if (!match) {
-    return res.error('Invalid credentials', 401);
+  if (!user || !match) {
+    return res.error('Invalid email or password', 401);
   }
 
   const secret = process.env.JWT_SECRET;
@@ -118,23 +103,25 @@ const forgotPassword = asyncHandler(async (req, res) => {
     where: { email: String(email).trim().toLowerCase() },
   });
 
-  if (!user) {
-    return res.error('User not found', 404);
+  if (user) {
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashed = hashResetToken(rawToken);
+
+    user.resetToken = hashed;
+    user.resetExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save({ fields: ['resetToken', 'resetExpiry'] });
+
+    const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+    const resetLink = `${frontendUrl}/reset-password/${rawToken}`;
+
+    await sendResetPasswordEmail(user.email, resetLink);
   }
 
-  const rawToken = crypto.randomBytes(32).toString('hex');
-  const hashed = hashResetToken(rawToken);
-
-  user.resetToken = hashed;
-  user.resetExpiry = new Date(Date.now() + 10 * 60 * 1000);
-  await user.save({ fields: ['resetToken', 'resetExpiry'] });
-
-  const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
-  const resetLink = `${frontendUrl}/reset-password/${rawToken}`;
-
-  await sendResetPasswordEmail(user.email, resetLink);
-
-  return res.success(null, 'Reset link sent to your email', 200);
+  return res.success(
+    null,
+    'If this email is registered, a reset link has been sent.',
+    200
+  );
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
@@ -163,9 +150,9 @@ const resetPassword = asyncHandler(async (req, res) => {
     return res.error('New password is required', 400);
   }
 
-  const pwdErr = validatePasswordRules(newPassword);
-  if (pwdErr) {
-    return res.error(pwdErr, 400);
+  const pwdErrs = validatePasswordRules(newPassword);
+  if (pwdErrs.length) {
+    return res.error(pwdErrs[0], 400);
   }
 
   user.password = newPassword;

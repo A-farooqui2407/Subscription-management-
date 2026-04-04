@@ -6,6 +6,7 @@ const discountController = require('../controllers/discountController');
 const verifyToken = require('../middleware/verifyToken');
 const checkRole = require('../middleware/checkRole');
 const asyncHandler = require('../utils/asyncHandler');
+const validateUuid = require('../middleware/validateUuid');
 
 const router = express.Router();
 
@@ -13,9 +14,9 @@ router.use(asyncHandler(verifyToken));
 router.use(checkRole('Admin'));
 
 router.get('/', discountController.getAllDiscounts);
-router.get('/:id', discountController.getDiscountById);
+router.get('/:id', validateUuid('id'), discountController.getDiscountById);
 router.post('/', discountController.createDiscount);
-router.put('/:id', discountController.updateDiscount);
-router.delete('/:id', discountController.deleteDiscount);
+router.put('/:id', validateUuid('id'), discountController.updateDiscount);
+router.delete('/:id', validateUuid('id'), discountController.deleteDiscount);
 
 module.exports = router;

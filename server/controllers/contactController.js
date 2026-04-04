@@ -4,15 +4,9 @@
 const { Op } = require('sequelize');
 const Contact = require('../models/Contact');
 const asyncHandler = require('../utils/asyncHandler');
+const { parsePagination } = require('../utils/pagination');
 
 const CONTACT_TYPES = ['customer', 'subscriber'];
-
-function parsePagination(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
-  const offset = (page - 1) * limit;
-  return { page, limit, offset };
-}
 
 const getAllContacts = asyncHandler(async (req, res) => {
   const { page, limit, offset } = parsePagination(req.query);

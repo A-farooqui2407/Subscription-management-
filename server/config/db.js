@@ -2,23 +2,50 @@
  * PostgreSQL connection via Sequelize.
  * Loads credentials from environment (see root .env.example).
  */
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({
+  path: path.resolve(__dirname, '../../.env'),
+  override: true,
+});
 
 const { Sequelize } = require('sequelize');
+const { logger } = require('../utils/logger');
 
-// TODO: instantiate with DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD (or DATABASE_URL)
-const sequelize = new Sequelize(
-  process.env.DATABASE_URL ||
-    `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
-  {
-    dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    define: {
-      underscored: true,
-      timestamps: true,
-    },
+const logging =
+  process.env.DEBUG_SQL === 'true' ? (sql) => logger.debug(sql) : false;
+
+const define = {
+  underscored: true,
+  timestamps: true,
+};
+
+/**
+ * Use DATABASE_URL when set; otherwise discrete DB_* vars (avoids URL parsing if password contains @, :, etc.).
+ */
+function createSequelize() {
+  const url = process.env.DATABASE_URL && String(process.env.DATABASE_URL).trim();
+  if (url) {
+    return new Sequelize(url, {
+      dialect: 'postgres',
+      logging,
+      define,
+    });
   }
-);
+
+  const database = process.env.DB_NAME;
+  const username = process.env.DB_USER;
+  const password = process.env.DB_PASSWORD != null ? process.env.DB_PASSWORD : '';
+
+  return new Sequelize(database, username, password, {
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 5432,
+    dialect: 'postgres',
+    logging,
+    define,
+  });
+}
+
+const sequelize = createSequelize();
 
 /**
  * Test database connectivity (optional health check).

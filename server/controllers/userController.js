@@ -5,34 +5,10 @@ const { Op } = require('sequelize');
 const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendWelcomeEmail } = require('../services/emailService');
+const { validatePasswordRules } = require('../utils/passwordPolicy');
+const { parsePagination } = require('../utils/pagination');
 
 const ROLES = ['Admin', 'InternalUser', 'PortalUser'];
-
-function validatePasswordRules(password) {
-  if (typeof password !== 'string') {
-    return 'Password is required';
-  }
-  if (password.length <= 8) {
-    return 'Password must be longer than 8 characters';
-  }
-  if (!/[A-Z]/.test(password)) {
-    return 'Password must contain at least one uppercase letter';
-  }
-  if (!/[a-z]/.test(password)) {
-    return 'Password must contain at least one lowercase letter';
-  }
-  if (!/[^A-Za-z0-9]/.test(password)) {
-    return 'Password must contain at least one special character';
-  }
-  return null;
-}
-
-function parsePagination(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
-  const offset = (page - 1) * limit;
-  return { page, limit, offset };
-}
 
 function toPublicUser(user) {
   if (!user) return null;
@@ -82,9 +58,9 @@ const createInternalUser = asyncHandler(async (req, res) => {
     return res.error('Role must be InternalUser', 400);
   }
 
-  const pwdErr = validatePasswordRules(password);
-  if (pwdErr) {
-    return res.error(pwdErr, 400);
+  const pwdErrs = validatePasswordRules(password);
+  if (pwdErrs.length) {
+    return res.error(pwdErrs[0], 400);
   }
 
   const normalizedEmail = String(email).trim().toLowerCase();

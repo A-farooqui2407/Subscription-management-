@@ -1,25 +1,23 @@
 /**
  * Quotation templates — Admin / InternalUser create/update; Admin-only delete.
  */
+const { Op } = require('sequelize');
 const QuotationTemplate = require('../models/QuotationTemplate');
 const Plan = require('../models/Plan');
 const Product = require('../models/Product');
 const Variant = require('../models/Variant');
 const asyncHandler = require('../utils/asyncHandler');
+const { parsePagination } = require('../utils/pagination');
 
 const PLAN_ATTRIBUTES = ['id', 'name', 'billingPeriod', 'price'];
-
-function parsePagination(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
-  const offset = (page - 1) * limit;
-  return { page, limit, offset };
-}
 
 async function validateProductLines(productLines) {
   if (!Array.isArray(productLines) || productLines.length < 1) {
     return 'productLines must be a non-empty array';
   }
+
+  const productIds = [];
+  const variantIds = [];
 
   for (let i = 0; i < productLines.length; i += 1) {
     const line = productLines[i];
@@ -38,17 +36,37 @@ async function validateProductLines(productLines) {
     if (Number.isNaN(up) || up < 0) {
       return `productLines[${i}] unitPrice must be a number >= 0`;
     }
+    productIds.push(productId);
+    if (variantId) variantIds.push(variantId);
+  }
 
-    const product = await Product.findByPk(productId);
-    if (!product) {
-      return `productLines[${i}]: product not found`;
-    }
+  const uniqueProductIds = [...new Set(productIds.map(String))];
+  const uniqueVariantIds = [...new Set(variantIds.map(String))];
 
+  const products = await Product.findAll({ where: { id: { [Op.in]: uniqueProductIds } } });
+  const productById = new Map(products.map((p) => [String(p.id), p]));
+
+  const variants =
+    uniqueVariantIds.length > 0
+      ? await Variant.findAll({ where: { id: { [Op.in]: uniqueVariantIds } } })
+      : [];
+  const variantById = new Map(variants.map((v) => [String(v.id), v]));
+
+  const missingProducts = uniqueProductIds.filter((id) => !productById.has(id));
+  if (missingProducts.length) {
+    return `Unknown product id(s): ${missingProducts.join(', ')}`;
+  }
+
+  const missingVariants = uniqueVariantIds.filter((id) => !variantById.has(id));
+  if (missingVariants.length) {
+    return `Unknown variant id(s): ${missingVariants.join(', ')}`;
+  }
+
+  for (let i = 0; i < productLines.length; i += 1) {
+    const line = productLines[i];
+    const { productId, variantId } = line;
     if (variantId) {
-      const variant = await Variant.findByPk(variantId);
-      if (!variant) {
-        return `productLines[${i}]: variant not found`;
-      }
+      const variant = variantById.get(String(variantId));
       if (String(variant.productId) !== String(productId)) {
         return `productLines[${i}]: variant does not belong to product`;
       }

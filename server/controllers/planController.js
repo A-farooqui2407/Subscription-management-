@@ -1,22 +1,17 @@
 /**
  * Plan CRUD — reads for authenticated users; writes Admin-only (routes).
  */
-const { Op } = require('sequelize');
+const { Op, QueryTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 const Plan = require('../models/Plan');
 const Subscription = require('../models/Subscription');
 const asyncHandler = require('../utils/asyncHandler');
+const { parsePagination } = require('../utils/pagination');
 
 const BILLING_PERIODS = ['daily', 'weekly', 'monthly', 'yearly'];
 
 /** Block delete when subscriptions are in these statuses (case-insensitive match). */
 const BLOCKING_SUBSCRIPTION_STATUSES = ['active', 'confirmed'];
-
-function parsePagination(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
-  const offset = (page - 1) * limit;
-  return { page, limit, offset };
-}
 
 function toNum(v, fallback = null) {
   if (v === undefined || v === null || v === '') return fallback;
@@ -45,13 +40,20 @@ async function loadSubscriptionCountsByPlanIds(planIds) {
     return new Map();
   }
 
-  const entries = await Promise.all(
-    planIds.map(async (id) => {
-      const c = await Subscription.count({ where: { planId: id } });
-      return [String(id), c];
-    })
+  const placeholders = planIds.map((_id, i) => `$${i + 1}`).join(', ');
+  const rows = await sequelize.query(
+    `SELECT plan_id AS "planId", COUNT(*)::int AS "subscriptionCount"
+     FROM subscriptions
+     WHERE deleted_at IS NULL AND plan_id IN (${placeholders})
+     GROUP BY plan_id`,
+    { bind: planIds, type: QueryTypes.SELECT }
   );
-  return new Map(entries);
+
+  const map = new Map();
+  for (const row of rows) {
+    map.set(String(row.planId), Number(row.subscriptionCount || 0));
+  }
+  return map;
 }
 
 const getAllPlans = asyncHandler(async (req, res) => {

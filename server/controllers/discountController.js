@@ -5,16 +5,10 @@ const { Op } = require('sequelize');
 const Discount = require('../models/Discount');
 const Subscription = require('../models/Subscription');
 const asyncHandler = require('../utils/asyncHandler');
+const { parsePagination } = require('../utils/pagination');
 
 const APPLIES_TO = ['products', 'subscriptions'];
 const DISCOUNT_TYPES = ['fixed', 'percentage'];
-
-function parsePagination(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
-  const offset = (page - 1) * limit;
-  return { page, limit, offset };
-}
 
 function toNum(v, fallback = null) {
   if (v === undefined || v === null || v === '') return fallback;

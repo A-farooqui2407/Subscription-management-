@@ -14,6 +14,7 @@ const QuotationTemplate = require('../models/QuotationTemplate');
 const Discount = require('../models/Discount');
 const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
+const { parsePagination } = require('../utils/pagination');
 const planService = require('../services/planService');
 const discountService = require('../services/discountService');
 const { generateInvoice } = require('../services/invoiceService');
@@ -26,13 +27,6 @@ const TRANSITIONS = {
   confirmed: ['active'],
   active: ['closed'],
 };
-
-function parsePagination(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
-  const offset = (page - 1) * limit;
-  return { page, limit, offset };
-}
 
 function subscriptionIncludeList() {
   return [
@@ -120,6 +114,10 @@ async function validateLineItems(lines, transaction) {
     return 'Lines must be a non-empty array';
   }
 
+  const productIds = [];
+  const variantIds = [];
+  const taxIds = [];
+
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     if (!line || typeof line !== 'object') {
@@ -137,26 +135,61 @@ async function validateLineItems(lines, transaction) {
     if (Number.isNaN(up) || up < 0) {
       return `Line ${i}: unitPrice must be >= 0`;
     }
+    productIds.push(productId);
+    if (variantId) variantIds.push(variantId);
+    if (taxId) taxIds.push(taxId);
+  }
 
-    const product = await Product.findByPk(productId, { transaction });
-    if (!product) {
-      return `Line ${i}: product not found`;
-    }
+  const uniqueProductIds = [...new Set(productIds.map(String))];
+  const uniqueVariantIds = [...new Set(variantIds.map(String))];
+  const uniqueTaxIds = [...new Set(taxIds.map(String))];
 
+  const products = await Product.findAll({
+    where: { id: { [Op.in]: uniqueProductIds } },
+    transaction,
+  });
+  const productById = new Map(products.map((p) => [String(p.id), p]));
+
+  const variants =
+    uniqueVariantIds.length > 0
+      ? await Variant.findAll({
+          where: { id: { [Op.in]: uniqueVariantIds } },
+          transaction,
+        })
+      : [];
+  const variantById = new Map(variants.map((v) => [String(v.id), v]));
+
+  const taxes =
+    uniqueTaxIds.length > 0
+      ? await Tax.findAll({
+          where: { id: { [Op.in]: uniqueTaxIds } },
+          transaction,
+        })
+      : [];
+  const taxById = new Map(taxes.map((t) => [String(t.id), t]));
+
+  const missingProducts = uniqueProductIds.filter((id) => !productById.has(id));
+  if (missingProducts.length) {
+    return `Unknown product id(s): ${missingProducts.join(', ')}`;
+  }
+
+  const missingVariants = uniqueVariantIds.filter((id) => !variantById.has(id));
+  if (missingVariants.length) {
+    return `Unknown variant id(s): ${missingVariants.join(', ')}`;
+  }
+
+  const missingTaxes = uniqueTaxIds.filter((id) => !taxById.has(id));
+  if (missingTaxes.length) {
+    return `Unknown tax id(s): ${missingTaxes.join(', ')}`;
+  }
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const { productId, variantId } = line;
     if (variantId) {
-      const variant = await Variant.findByPk(variantId, { transaction });
-      if (!variant) {
-        return `Line ${i}: variant not found`;
-      }
+      const variant = variantById.get(String(variantId));
       if (String(variant.productId) !== String(productId)) {
         return `Line ${i}: variant does not belong to product`;
-      }
-    }
-
-    if (taxId) {
-      const tax = await Tax.findByPk(taxId, { transaction });
-      if (!tax) {
-        return `Line ${i}: tax not found`;
       }
     }
   }
@@ -356,6 +389,8 @@ const updateSubscription = asyncHandler(async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
+    let planResolvedForExpiration = null;
+
     if (customerId !== undefined) {
       const c = await Contact.findByPk(customerId, { transaction: t });
       if (!c) {
@@ -377,6 +412,7 @@ const updateSubscription = asyncHandler(async (req, res) => {
         return res.error('Plan is not available', 400);
       }
       sub.planId = planId;
+      planResolvedForExpiration = p;
     }
 
     if (discountId !== undefined) {
@@ -395,9 +431,25 @@ const updateSubscription = asyncHandler(async (req, res) => {
     if (startDate !== undefined) {
       sub.startDate = startDate;
     }
-    if (expirationDate !== undefined) {
+
+    if (planId !== undefined || startDate !== undefined) {
+      const mergedStart = startDate !== undefined ? startDate : sub.startDate;
+      const planRow =
+        planResolvedForExpiration ||
+        (await Plan.findByPk(sub.planId, { transaction: t }));
+      try {
+        sub.expirationDate = planService.calculateNextBillingDate(
+          mergedStart,
+          planRow.billingPeriod
+        );
+      } catch {
+        await t.rollback();
+        return res.error('Could not calculate expiration from plan billing period', 400);
+      }
+    } else if (expirationDate !== undefined) {
       sub.expirationDate = expirationDate || null;
     }
+
     if (paymentTerms !== undefined) {
       sub.paymentTerms = paymentTerms != null ? String(paymentTerms) : null;
     }

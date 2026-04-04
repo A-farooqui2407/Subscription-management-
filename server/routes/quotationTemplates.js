@@ -6,11 +6,17 @@ const verifyToken = require('../middleware/verifyToken');
 const checkRole = require('../middleware/checkRole');
 const asyncHandler = require('../utils/asyncHandler');
 const quotationTemplateController = require('../controllers/quotationTemplateController');
+const validateUuid = require('../middleware/validateUuid');
 
 const router = express.Router();
 
 router.get('/', asyncHandler(verifyToken), quotationTemplateController.getAllTemplates);
-router.get('/:id', asyncHandler(verifyToken), quotationTemplateController.getTemplateById);
+router.get(
+  '/:id',
+  validateUuid('id'),
+  asyncHandler(verifyToken),
+  quotationTemplateController.getTemplateById
+);
 router.post(
   '/',
   asyncHandler(verifyToken),
@@ -19,12 +25,14 @@ router.post(
 );
 router.put(
   '/:id',
+  validateUuid('id'),
   asyncHandler(verifyToken),
   checkRole('Admin', 'InternalUser'),
   quotationTemplateController.updateTemplate
 );
 router.delete(
   '/:id',
+  validateUuid('id'),
   asyncHandler(verifyToken),
   checkRole('Admin'),
   quotationTemplateController.deleteTemplate

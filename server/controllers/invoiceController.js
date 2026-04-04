@@ -7,15 +7,9 @@ const Subscription = require('../models/Subscription');
 const Contact = require('../models/Contact');
 const asyncHandler = require('../utils/asyncHandler');
 const invoiceService = require('../services/invoiceService');
+const { parsePagination } = require('../utils/pagination');
 
 const LIST_STATUSES = ['draft', 'confirmed', 'paid'];
-
-function parsePagination(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
-  const offset = (page - 1) * limit;
-  return { page, limit, offset };
-}
 
 const getAllInvoices = asyncHandler(async (req, res) => {
   const { page, limit, offset } = parsePagination(req.query);

@@ -8,13 +8,7 @@ const Subscription = require('../models/Subscription');
 const Contact = require('../models/Contact');
 const asyncHandler = require('../utils/asyncHandler');
 const { PAYMENT_METHODS } = require('../services/invoiceService');
-
-function parsePagination(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.max(1, parseInt(query.limit, 10) || 10);
-  const offset = (page - 1) * limit;
-  return { page, limit, offset };
-}
+const { parsePagination } = require('../utils/pagination');
 
 const paymentListInclude = [
   {

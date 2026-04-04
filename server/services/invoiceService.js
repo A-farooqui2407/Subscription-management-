@@ -2,6 +2,7 @@
  * Invoice lifecycle — generate from subscription, confirm, cancel, send, pay, detail load.
  */
 const { sequelize } = require('../config/db');
+const AppError = require('../utils/AppError');
 const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
 const Subscription = require('../models/Subscription');
@@ -223,6 +224,18 @@ async function recordPayment(invoiceId, paymentData) {
 
   const t = await sequelize.transaction();
   try {
+    const existingSum = await Payment.sum('amount', {
+      where: { invoiceId: invoice.id },
+      transaction: t,
+    });
+    const alreadyPaid = Number(existingSum || 0);
+    const invTotal = Number(invoice.total);
+    const remaining = invTotal - alreadyPaid;
+
+    if (amt > remaining + 0.01) {
+      throw new AppError('Payment amount exceeds remaining balance', 400);
+    }
+
     const payment = await Payment.create(
       {
         invoiceId: invoice.id,
@@ -234,8 +247,11 @@ async function recordPayment(invoiceId, paymentData) {
       { transaction: t }
     );
 
-    invoice.status = 'paid';
-    invoice.paidAt = new Date();
+    const newTotalPaid = alreadyPaid + amt;
+    if (newTotalPaid + 0.01 >= invTotal) {
+      invoice.status = 'paid';
+      invoice.paidAt = new Date();
+    }
     await invoice.save({ transaction: t });
 
     await t.commit();
