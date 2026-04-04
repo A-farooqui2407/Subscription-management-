@@ -69,6 +69,11 @@ const Invoice = sequelize.define(
   {
     tableName: 'invoices',
     paranoid: true,
+    indexes: [
+      { fields: ['status'] },
+      { fields: ['dueDate'] },
+      { fields: ['subscriptionId'] },
+    ],
     hooks: {
       beforeCreate: (inv) => {
         if (!inv.invoiceNumber) {

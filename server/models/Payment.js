@@ -38,6 +38,10 @@ const Payment = sequelize.define(
   },
   {
     tableName: 'payments',
+    indexes: [
+      { fields: ['paymentDate'] },
+      { fields: ['invoiceId'] },
+    ],
   }
 );
 

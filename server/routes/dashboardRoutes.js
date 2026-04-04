@@ -4,14 +4,15 @@
 const express = require('express');
 const verifyToken = require('../middleware/verifyToken');
 const checkRole = require('../middleware/checkRole');
+const asyncHandler = require('../utils/asyncHandler');
 const dashboardController = require('../controllers/dashboardController');
 
 const router = express.Router();
 
-router.get('/', verifyToken, dashboardController.getDashboardKPIs);
+router.get('/', asyncHandler(verifyToken), dashboardController.getDashboardKPIs);
 router.get(
   '/reports',
-  verifyToken,
+  asyncHandler(verifyToken),
   checkRole('Admin', 'InternalUser'),
   dashboardController.getReports
 );
