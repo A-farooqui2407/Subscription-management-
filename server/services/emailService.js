@@ -120,10 +120,45 @@ function escapeHtml(s) {
 }
 
 /**
- * Send invoice PDF link or attachment to customer.
+ * Send invoice notification to customer.
+ * @param {string} to
+ * @param {import('sequelize').Model|object} invoice
  */
-async function sendInvoiceEmail({ to, invoice, attachmentPath }) {
-  // TODO: template + sendMail with attachment optional
+async function sendInvoiceEmail(to, invoice) {
+  const plain = typeof invoice.get === 'function' ? invoice.get({ plain: true }) : invoice;
+  const num = plain.invoiceNumber || plain.id;
+  const total = plain.total != null ? String(plain.total) : '—';
+  const due = plain.dueDate != null ? String(plain.dueDate) : '—';
+  const base = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  const viewPath = `/invoices/${plain.id}`;
+  const viewUrl = base ? `${base}${viewPath}` : viewPath;
+
+  const subject = `Invoice ${num} from Subscription Management`;
+  const text = [
+    `Invoice number: ${num}`,
+    `Total amount: ${total}`,
+    `Due date: ${due}`,
+    '',
+    `View your invoice: ${viewUrl}`,
+  ].join('\n');
+
+  const html = `
+    <p>Your invoice <strong>${escapeHtml(String(num))}</strong> is ready.</p>
+    <ul>
+      <li><strong>Total amount:</strong> ${escapeHtml(total)}</li>
+      <li><strong>Due date:</strong> ${escapeHtml(due)}</li>
+    </ul>
+    <p><a href="${escapeHtml(viewUrl)}">View invoice</a></p>
+    <p>— Subscription Management</p>
+  `.trim();
+
+  await sendMail({
+    to,
+    subject,
+    text,
+    html,
+    from: process.env.SMTP_FROM || process.env.EMAIL_FROM,
+  });
 }
 
 module.exports = {

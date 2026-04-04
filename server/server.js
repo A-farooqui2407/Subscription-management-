@@ -1,30 +1,26 @@
 /**
- * HTTP server entry — starts Express app, optional DB sync / listen port.
+ * HTTP server entry — loads models/associations, tests DB, starts Express.
  */
 require('dotenv').config();
 
 const app = require('./app');
-const { sequelize, testConnection } = require('./config/db');
-
-// Import models so Sequelize registers them (associations to be wired later).
-require('./models/User');
-require('./models/Contact');
-require('./models/Product');
-require('./models/Variant');
-require('./models/Tax');
-require('./models/Discount');
-require('./models/Plan');
-require('./models/QuotationTemplate');
-require('./models/Subscription');
-require('./models/OrderLine');
-require('./models/Invoice');
-require('./models/Payment');
+const { testConnection } = require('./config/db');
 
 const PORT = process.env.PORT || 3000;
 
 async function start() {
-  // TODO: await testConnection()
-  // TODO: await sequelize.sync({ alter: false }) or use migrations only
+  try {
+    await testConnection();
+    // eslint-disable-next-line no-console
+    console.log('Database connection OK');
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Database connection failed:', err.message);
+    // Continue so API can still run once DB is configured; remove this block to fail fast.
+  }
+
+  // Optional: await sequelize.sync({ alter: true }) — use migrations in production
+
   app.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Server listening on port ${PORT}`);

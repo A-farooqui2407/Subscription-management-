@@ -69,6 +69,3 @@ User.prototype.comparePassword = async function comparePassword(candidatePasswor
 };
 
 module.exports = User;
-
-const Contact = require('./Contact');
-User.hasMany(Contact, { foreignKey: 'createdBy', as: 'createdContacts' });

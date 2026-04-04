@@ -3,6 +3,8 @@
  */
 require('dotenv').config();
 
+require('./models/index');
+
 const express = require('express');
 const cors = require('cors');
 
@@ -13,14 +15,14 @@ const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const contactRoutes = require('./routes/contacts');
-const productRoutes = require('./routes/productRoutes');
-const taxRoutes = require('./routes/taxRoutes');
-const discountRoutes = require('./routes/discountRoutes');
-const planRoutes = require('./routes/planRoutes');
-const quotationTemplateRoutes = require('./routes/quotationTemplateRoutes');
-const subscriptionRoutes = require('./routes/subscriptionRoutes');
-const invoiceRoutes = require('./routes/invoiceRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
+const productRoutes = require('./routes/products');
+const taxRoutes = require('./routes/taxes');
+const discountRoutes = require('./routes/discounts');
+const planRoutes = require('./routes/plans');
+const quotationTemplateRoutes = require('./routes/quotationTemplates');
+const subscriptionRoutes = require('./routes/subscriptions');
+const invoiceRoutes = require('./routes/invoices');
+const paymentRoutes = require('./routes/payments');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();

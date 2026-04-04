@@ -1,14 +1,19 @@
 /**
- * Dashboard KPIs + filtered reports.
+ * Dashboard KPIs + filtered reports (Admin / InternalUser for reports).
  */
 const express = require('express');
+const verifyToken = require('../middleware/verifyToken');
+const checkRole = require('../middleware/checkRole');
 const dashboardController = require('../controllers/dashboardController');
-// const verifyToken = require('../middleware/verifyToken');
 
 const router = express.Router();
 
-// TODO: router.use(verifyToken);
-router.get('/', dashboardController.getDashboard);
-router.get('/reports', dashboardController.getReports);
+router.get('/', verifyToken, dashboardController.getDashboardKPIs);
+router.get(
+  '/reports',
+  verifyToken,
+  checkRole('Admin', 'InternalUser'),
+  dashboardController.getReports
+);
 
 module.exports = router;

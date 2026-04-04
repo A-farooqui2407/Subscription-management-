@@ -43,6 +43,3 @@ const Contact = sequelize.define(
 );
 
 module.exports = Contact;
-
-const User = require('./User');
-Contact.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
