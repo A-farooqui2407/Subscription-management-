@@ -35,8 +35,8 @@ const Sidebar = ({ isPinned, setIsPinned }) => {
     <aside 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`bg-slate-900 text-white flex flex-col h-screen flex-shrink-0 z-40 transition-all duration-200 ease-in-out ${
-        isPinned ? 'relative w-56' : 'absolute left-0 top-0 w-16 hover:w-56 shadow-2xl'
+      className={`bg-slate-900 text-white flex flex-col h-screen flex-shrink-0 transition-all duration-200 ease-in-out ${
+        isExpanded ? 'w-56 shadow-xl z-20' : 'w-16 z-20'
       }`}
     >
       <div className="h-16 flex items-center px-4 border-b border-slate-800/50 justify-between flex-shrink-0">

@@ -13,9 +13,9 @@ const Layout = ({ children }) => {
   }, [isPinned]);
 
   return (
-      <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-900 relative">
+      <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
         <Sidebar isPinned={isPinned} setIsPinned={setIsPinned} />
-        <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-200 ease-in-out ${!isPinned ? 'ml-16' : ''}`}>
+        <div className="flex-1 flex flex-col overflow-hidden transition-all duration-200 ease-in-out">
           <Navbar />
           <main className="flex-1 overflow-y-auto p-8 pb-24 relative">
             <div className="max-w-7xl mx-auto">
