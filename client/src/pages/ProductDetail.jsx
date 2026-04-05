@@ -111,7 +111,7 @@ const ProductDetail = () => {
                   <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{product.name}</h1>
                   <div className="flex items-center gap-3 mt-2 text-sm text-slate-500 font-medium">
                       <span className="font-mono bg-slate-100 px-2 rounded tracking-wide text-[11px] uppercase">ID: {product.id}</span>
-                      <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> {product.type} Setup</span>
+                      <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> {product.productType} Setup</span>
                   </div>
               </div>
            </div>

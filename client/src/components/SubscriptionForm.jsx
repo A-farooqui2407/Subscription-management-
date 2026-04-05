@@ -7,8 +7,25 @@ import { taxesApi } from '../api/taxes';
 import { contactsApi } from '../api/contacts';
 import { quotationTemplatesApi } from '../api/quotationTemplates';
 import { discountsApi } from '../api/discounts';
+import { useToast } from './Toast';
+
+function toOrderLinesForApi(lines) {
+  return lines
+    .filter((l) => l && l.productId)
+    .map((l) => {
+      const row = {
+        productId: l.productId,
+        qty: parseInt(l.qty, 10) || 1,
+        unitPrice: Number(l.unitPrice) || 0,
+      };
+      if (l.variantId) row.variantId = l.variantId;
+      if (l.taxId) row.taxId = l.taxId;
+      return row;
+    });
+}
 
 const SubscriptionForm = ({ isOpen, onClose, onSave }) => {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     customerId: '',
     planId: '',
@@ -51,26 +68,36 @@ const SubscriptionForm = ({ isOpen, onClose, onSave }) => {
       setSelectedTemplate(tId);
       if (!tId) return;
 
-      const tmpl = templates.find(t => t.id === Number(tId));
+      const tmpl = templates.find((t) => String(t.id) === String(tId));
       if (tmpl) {
-          setFormData({
-              ...formData,
-              planId: tmpl.planId || '',
-          });
-          setLines(tmpl.lines || []);
+          const raw = tmpl.productLines || tmpl.lines || [];
+          const mapped = (Array.isArray(raw) ? raw : []).map((l, i) => ({
+            id: `sub-line-${i}-${l.productId || i}`,
+            productId: l.productId ?? '',
+            variantId: l.variantId ?? '',
+            taxId: l.taxId ?? '',
+            qty: l.qty ?? 1,
+            unitPrice: l.unitPrice ?? 0,
+          }));
+          setFormData((prev) => ({
+            ...prev,
+            planId: tmpl.planId || '',
+          }));
+          setLines(mapped);
       }
   };
 
   const handlePlanChange = (e) => {
       const pId = e.target.value;
       
-      const p = plans.find(x => x.id === Number(pId));
+      const p = plans.find((x) => String(x.id) === String(pId));
       if (p && p.billingPeriod && formData.startDate) {
-          // Compute expiration explicitly via billing logic pseudo
           const sd = new Date(formData.startDate);
-          if (p.billingPeriod === 'Monthly') sd.setMonth(sd.getMonth() + 1);
-          if (p.billingPeriod === 'Yearly') sd.setFullYear(sd.getFullYear() + 1);
-          if (p.billingPeriod === 'Weekly') sd.setDate(sd.getDate() + 7);
+          const cycle = String(p.billingPeriod).toLowerCase();
+          if (cycle === 'monthly') sd.setMonth(sd.getMonth() + 1);
+          else if (cycle === 'yearly') sd.setFullYear(sd.getFullYear() + 1);
+          else if (cycle === 'weekly') sd.setDate(sd.getDate() + 7);
+          else if (cycle === 'daily') sd.setDate(sd.getDate() + 1);
           
           setFormData({ ...formData, planId: pId, expirationDate: sd.toISOString().split('T')[0] });
       } else {
@@ -81,10 +108,23 @@ const SubscriptionForm = ({ isOpen, onClose, onSave }) => {
   if (!isOpen) return null;
 
   const handleSubmit = (actionType) => {
+    if (!formData.customerId || !formData.planId || !formData.startDate) {
+      toast.warning('Select a customer, plan, and start date.');
+      return;
+    }
+    const orderLines = toOrderLinesForApi(lines);
+    if (orderLines.length < 1) {
+      toast.warning('Add at least one order line with a product selected.');
+      return;
+    }
     onSave({
-      ...formData,
-      status: actionType, // generic draft or quotation based on parameter natively
-      lines
+      customerId: formData.customerId,
+      planId: formData.planId,
+      startDate: formData.startDate,
+      paymentTerms: formData.paymentTerms || null,
+      discountId: formData.discountId || undefined,
+      orderLines,
+      status: actionType,
     });
   };
 

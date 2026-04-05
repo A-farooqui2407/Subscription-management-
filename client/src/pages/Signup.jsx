@@ -67,6 +67,9 @@ const Signup = () => {
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/40 via-[#0a0a0a] to-[#0a0a0a] px-4 py-8">
       <div className="max-w-md w-full backdrop-blur-xl bg-white/5 p-8 rounded-3xl border border-white/10 shadow-2xl">
         <div className="text-center mb-8">
+          <p className="text-2xl font-black tracking-tight text-white mb-4">
+            TR<span className="text-indigo-400">ACE</span>
+          </p>
           <h2 className="text-3xl font-extrabold text-white tracking-tight">Create Account</h2>
           <p className="text-slate-400 mt-2 text-sm font-medium">Join us and manage everything easily</p>
           <p className="text-slate-500 mt-3 text-xs leading-relaxed max-w-sm mx-auto">

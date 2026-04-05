@@ -43,10 +43,10 @@ const Sidebar = ({ isPinned, setIsPinned }) => {
       <div className="h-16 flex items-center px-4 border-b border-slate-800/50 justify-between flex-shrink-0">
         <div className="flex items-center w-full">
             <div className={`flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-lg shadow-[0_0_15px_rgba(79,70,229,0.5)] flex items-center justify-center font-bold transition-all duration-200 ${!isExpanded ? 'mx-auto' : ''}`}>
-              S
+              T
             </div>
             <h1 className={`text-xl font-black tracking-tight ml-3 transition-opacity duration-200 whitespace-nowrap overflow-hidden ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
-                SaaS<span className="text-indigo-500">Box</span>
+              TR<span className="text-indigo-500">ACE</span>
             </h1>
         </div>
         

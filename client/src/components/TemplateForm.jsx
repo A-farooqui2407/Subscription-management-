@@ -1,11 +1,40 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { X, FileText, Save } from 'lucide-react';
 import OrderLinesTable from './OrderLinesTable';
 import { productsApi } from '../api/products';
 import { plansApi } from '../api/plans';
 import { taxesApi } from '../api/taxes';
+import { useToast } from './Toast';
+
+/** API stores `productLines`; UI uses `lines` with extra fields (id, taxId). */
+function linesFromTemplate(productLines) {
+  const raw = Array.isArray(productLines) ? productLines : [];
+  return raw.map((l, i) => ({
+    id: l.id || `tpl-${i}-${l.productId || i}`,
+    productId: l.productId ?? '',
+    variantId: l.variantId ?? '',
+    taxId: l.taxId ?? '',
+    qty: l.qty ?? 1,
+    unitPrice: l.unitPrice ?? 0,
+  }));
+}
+
+function toProductLinesForApi(lines) {
+  return lines
+    .filter((l) => l && l.productId)
+    .map((l) => {
+      const row = {
+        productId: l.productId,
+        qty: parseInt(l.qty, 10) || 1,
+        unitPrice: Number(l.unitPrice) || 0,
+      };
+      if (l.variantId) row.variantId = l.variantId;
+      return row;
+    });
+}
 
 const TemplateForm = ({ isOpen, onClose, onSave, templateToEdit }) => {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: '',
     validityDays: 30,
@@ -32,9 +61,11 @@ const TemplateForm = ({ isOpen, onClose, onSave, templateToEdit }) => {
       setFormData({
         name: templateToEdit.name || '',
         validityDays: templateToEdit.validityDays || 30,
-        planId: templateToEdit.planId || ''
+        planId: templateToEdit.planId || '',
       });
-      setLines(templateToEdit.lines || []);
+      setLines(
+        linesFromTemplate(templateToEdit.productLines || templateToEdit.lines || []),
+      );
     } else {
       setFormData({ name: '', validityDays: 30, planId: '' });
       setLines([]);
@@ -45,10 +76,24 @@ const TemplateForm = ({ isOpen, onClose, onSave, templateToEdit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!formData.name?.trim()) {
+      toast.warning('Please enter a template name.');
+      return;
+    }
+    if (!formData.planId) {
+      toast.warning('Please select a plan for this template.');
+      return;
+    }
+    const productLines = toProductLinesForApi(lines);
+    if (productLines.length < 1) {
+      toast.warning('Add at least one order line with a product selected.');
+      return;
+    }
     onSave({
-      ...formData,
-      validityDays: Number(formData.validityDays),
-      lines
+      name: formData.name.trim(),
+      validityDays: Number(formData.validityDays) || 30,
+      planId: formData.planId,
+      productLines,
     });
   };
 
@@ -94,13 +139,16 @@ const TemplateForm = ({ isOpen, onClose, onSave, templateToEdit }) => {
 
                <div className="md:col-span-3">
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Assigned Target Plan Schema</label>
-                  <select 
+                  <select
+                    required
                     value={formData.planId}
-                    onChange={(e) => setFormData({...formData, planId: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, planId: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm appearance-none"
                   >
-                    <option value="">No Recurrent Hooks Applied (One-off)</option>
-                    {plans.filter(p => p.isActive).map(p => (
+                    <option value="" disabled>
+                      Select a plan…
+                    </option>
+                    {plans.filter((p) => p.isActive).map((p) => (
                        <option key={p.id} value={p.id}>Bind → {p.name} (${Number(p.price).toFixed(2)}/cycle)</option>
                     ))}
                   </select>

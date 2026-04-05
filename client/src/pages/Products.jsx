@@ -35,7 +35,12 @@ const Products = () => {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const { rows, meta } = await productsApi.getProducts({ search, type: typeFilter, page, limit });
+      const { rows, meta } = await productsApi.getProducts({
+        search,
+        productType: typeFilter || undefined,
+        page,
+        limit,
+      });
       setData(rows);
       setTotal(meta.total ?? 0);
     } catch (e) {
@@ -62,7 +67,11 @@ const Products = () => {
       setIsModalOpen(false);
       fetchProducts();
     } catch (e) {
-      toast.error("An error occurred updating the product catalog");
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Could not save the product.';
+      toast.error(msg);
     }
   };
 
@@ -73,7 +82,11 @@ const Products = () => {
       setIsConfirmOpen(false);
       fetchProducts();
     } catch (e) {
-      toast.error("Failed to delete product.");
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Could not delete the product.';
+      toast.error(msg);
     }
   };
 
@@ -194,7 +207,9 @@ const Products = () => {
                       <div className="font-bold text-slate-800">{p.name}</div>
                       <div className="text-xs text-slate-400 mt-0.5">ID: {p.id}</div>
                     </td>
-                    <td className="p-4"><TypeBadge type={p.type} /></td>
+                    <td className="p-4">
+                      <TypeBadge type={p.productType} />
+                    </td>
                     <td className="p-4 text-right font-medium text-slate-700">${Number(p.salesPrice).toFixed(2)}</td>
                     <td className="p-4 text-center">
                       <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-xs font-bold text-slate-600 border border-slate-200">

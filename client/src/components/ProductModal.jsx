@@ -4,21 +4,26 @@ import { X, Box, Save } from 'lucide-react';
 const ProductModal = ({ isOpen, onClose, onSave, productToEdit }) => {
   const [formData, setFormData] = useState({
     name: '',
-    type: 'Service',
+    productType: 'Service',
     salesPrice: '',
-    costPrice: ''
+    costPrice: '',
   });
 
   useEffect(() => {
     if (productToEdit) {
       setFormData({
         name: productToEdit.name || '',
-        type: productToEdit.type || 'Service',
-        salesPrice: productToEdit.salesPrice || '',
-        costPrice: productToEdit.costPrice || ''
+        productType: productToEdit.productType || 'Service',
+        salesPrice: productToEdit.salesPrice ?? '',
+        costPrice: productToEdit.costPrice ?? '',
       });
     } else {
-      setFormData({ name: '', type: 'Service', salesPrice: '', costPrice: '' });
+      setFormData({
+        name: '',
+        productType: 'Service',
+        salesPrice: '',
+        costPrice: '',
+      });
     }
   }, [productToEdit, isOpen]);
 
@@ -26,10 +31,13 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const sp = Number(formData.salesPrice);
+    const cp = formData.costPrice === '' ? 0 : Number(formData.costPrice);
     onSave({
-      ...formData,
-      salesPrice: Number(formData.salesPrice),
-      costPrice: Number(formData.costPrice)
+      name: formData.name.trim(),
+      productType: formData.productType,
+      salesPrice: sp,
+      costPrice: cp,
     });
   };
 
@@ -65,9 +73,11 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit }) => {
           
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">Product Type</label>
-            <select 
-              value={formData.type}
-              onChange={(e) => setFormData({...formData, type: e.target.value})}
+            <select
+              value={formData.productType}
+              onChange={(e) =>
+                setFormData({ ...formData, productType: e.target.value })
+              }
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all appearance-none"
             >
               <option value="Service">Service</option>
