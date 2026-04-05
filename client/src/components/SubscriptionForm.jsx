@@ -228,7 +228,7 @@ const SubscriptionForm = ({ isOpen, onClose, onSave }) => {
                  className="w-full sm:w-1/2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm appearance-none"
                >
                  <option value="">No Active Promotions Configured</option>
-                 {discounts.map(d => <option key={d.id} value={d.id}>{d.name} ({d.type === 'Percentage' ? d.value + '%' : '$' + d.value} OFF)</option>)}
+                 {discounts.map(d => <option key={d.id} value={d.id}>{d.name} ({String(d.type).toLowerCase() === 'percentage' ? d.value + '%' : '$' + d.value} OFF)</option>)}
                </select>
             </div>
 

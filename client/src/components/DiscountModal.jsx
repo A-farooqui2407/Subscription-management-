@@ -19,21 +19,21 @@ const DiscountModal = ({ isOpen, onClose, onSave, discountToEdit }) => {
     if (discountToEdit) {
       setFormData({
         name: discountToEdit.name || '',
-        type: discountToEdit.type || 'Percentage',
+        type: discountToEdit.type || 'percentage',
         value: discountToEdit.value || '',
         minPurchase: discountToEdit.minPurchase || '',
         minQty: discountToEdit.minQty || '',
         startDate: discountToEdit.startDate || '',
         endDate: discountToEdit.endDate || '',
         limitUsage: discountToEdit.limitUsage || '',
-        appliesTo: discountToEdit.appliesTo || 'Subscriptions',
+        appliesTo: discountToEdit.appliesTo || 'subscriptions',
         isActive: discountToEdit.isActive !== undefined ? discountToEdit.isActive : true
       });
     } else {
       setFormData({ 
-        name: '', type: 'Percentage', value: '', 
+        name: '', type: 'percentage', value: '', 
         minPurchase: '', minQty: '', startDate: '', endDate: '', 
-        limitUsage: '', appliesTo: 'Subscriptions', isActive: true 
+        limitUsage: '', appliesTo: 'subscriptions', isActive: true 
       });
     }
   }, [discountToEdit, isOpen]);
@@ -89,8 +89,8 @@ const DiscountModal = ({ isOpen, onClose, onSave, discountToEdit }) => {
                   onChange={(e) => setFormData({...formData, type: e.target.value})}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all appearance-none"
                 >
-                  <option value="Percentage">Percentage (%)</option>
-                  <option value="Fixed">Fixed Amount ($)</option>
+                  <option value="percentage">Percentage (%)</option>
+                  <option value="fixed">Fixed Amount ($)</option>
                 </select>
              </div>
              <div>
@@ -176,9 +176,8 @@ const DiscountModal = ({ isOpen, onClose, onSave, discountToEdit }) => {
                   onChange={(e) => setFormData({...formData, appliesTo: e.target.value})}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all appearance-none text-sm"
                 >
-                  <option value="Subscriptions">Applies to Subscriptions</option>
-                  <option value="Products">Applies to Standalone Products</option>
-                  <option value="Both">Applies universally to Cart</option>
+                  <option value="subscriptions">Applies to Subscriptions</option>
+                  <option value="products">Applies to Products</option>
                 </select>
              </div>
           </div>
