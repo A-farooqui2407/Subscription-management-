@@ -55,12 +55,16 @@ const Contacts = () => {
         toast.success("Contact updated successfully");
       } else {
         await contactsApi.createContact(contactData);
-        toast.success("Contact added seamlessly");
+        toast.success("Contact added successfully");
       }
       setIsModalOpen(false);
       fetchContacts();
     } catch (e) {
-      toast.error("An error occurred updating the contact pipeline");
+      const errorMsg =
+        e.response?.data?.message ||
+        e.message ||
+        'An error occurred. Please try again.';
+      toast.error(errorMsg);
     }
   };
 
@@ -71,7 +75,11 @@ const Contacts = () => {
       setIsConfirmOpen(false);
       fetchContacts();
     } catch (e) {
-      toast.error("Failed to execute deletion protocol");
+      const errorMsg =
+        e.response?.data?.message ||
+        e.message ||
+        'Failed to delete contact. Please try again.';
+      toast.error(errorMsg);
     }
   };
 
