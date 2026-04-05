@@ -62,7 +62,11 @@ const QuotationTemplates = () => {
       setIsModalOpen(false);
       fetchTemplates();
     } catch (e) {
-      toast.error("Template injection dropped heavily.");
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Could not save the template.';
+      toast.error(msg);
     }
   };
 
@@ -73,7 +77,11 @@ const QuotationTemplates = () => {
       setIsConfirmOpen(false);
       fetchTemplates();
     } catch (e) {
-      toast.error("Cannot execute destructive query.");
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Could not delete the template.';
+      toast.error(msg);
     }
   };
 
@@ -156,7 +164,7 @@ const QuotationTemplates = () => {
                     </td>
                     <td className="p-4 text-center">
                        <span className="inline-flex items-center justify-center w-7 h-7 bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-full text-xs">
-                          {t.lines?.length || 0}
+                          {t.productLines?.length ?? t.lines?.length ?? 0}
                        </span>
                     </td>
                     <td className="p-4 pr-6 text-right space-x-2 whitespace-nowrap">

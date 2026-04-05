@@ -62,14 +62,39 @@ const Subscriptions = () => {
   }, [fetchData]);
 
   const handleSave = async (sData) => {
+    const { status: intendedStatus, ...createPayload } = sData;
     try {
-      // Create new sub
-      await subscriptionsApi.createSubscription(sData);
-      toast.success(sData.status === 'draft' ? "Subscription Draft initialized!" : "Quotation generated & issued.");
+      const created = await subscriptionsApi.createSubscription(createPayload);
+      const id = created?.id;
+
+      if (intendedStatus === 'quotation' && id) {
+        try {
+          await subscriptionsApi.updateStatus(id, 'quotation');
+        } catch (e2) {
+          const hint =
+            e2.response?.data?.message ||
+            e2.message ||
+            'Status update failed';
+          toast.warning(`Subscription created as draft. ${hint}`);
+          setIsModalOpen(false);
+          fetchData();
+          return;
+        }
+      }
+
+      toast.success(
+        intendedStatus === 'draft'
+          ? 'Subscription saved as draft.'
+          : 'Quotation issued.',
+      );
       setIsModalOpen(false);
       fetchData();
     } catch (e) {
-      toast.error("Failed executing core creation logic natively.");
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Could not create subscription.';
+      toast.error(msg);
     }
   };
 

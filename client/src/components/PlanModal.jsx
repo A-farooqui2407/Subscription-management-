@@ -5,7 +5,7 @@ const PlanModal = ({ isOpen, onClose, onSave, planToEdit }) => {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    billingPeriod: 'Monthly',
+    billingPeriod: 'monthly',
     minQty: '',
     startDate: '',
     endDate: '',
@@ -23,23 +23,28 @@ const PlanModal = ({ isOpen, onClose, onSave, planToEdit }) => {
       setFormData({
         name: planToEdit.name || '',
         price: planToEdit.price || '',
-        billingPeriod: planToEdit.billingPeriod || 'Monthly',
+        billingPeriod: String(planToEdit.billingPeriod || 'monthly').toLowerCase(),
         minQty: planToEdit.minQty || '',
         startDate: planToEdit.startDate || '',
         endDate: planToEdit.endDate || '',
         options: {
-          autoClose: planToEdit.options?.autoClose || false,
-          closable: planToEdit.options?.closable !== undefined ? planToEdit.options.closable : true,
-          pausable: planToEdit.options?.pausable !== undefined ? planToEdit.options.pausable : true,
-          renewable: planToEdit.options?.renewable !== undefined ? planToEdit.options.renewable : true,
+          autoClose: planToEdit.autoClose ?? planToEdit.options?.autoClose ?? false,
+          closable: planToEdit.closable ?? planToEdit.options?.closable ?? true,
+          pausable: planToEdit.pausable ?? planToEdit.options?.pausable ?? true,
+          renewable: planToEdit.renewable ?? planToEdit.options?.renewable ?? true,
         },
-        isActive: planToEdit.isActive !== undefined ? planToEdit.isActive : true
+        isActive: planToEdit.isActive !== undefined ? planToEdit.isActive : true,
       });
     } else {
-      setFormData({ 
-        name: '', price: '', billingPeriod: 'Monthly', minQty: '', startDate: '', endDate: '', 
+      setFormData({
+        name: '',
+        price: '',
+        billingPeriod: 'monthly',
+        minQty: '',
+        startDate: '',
+        endDate: '',
         options: { autoClose: false, closable: true, pausable: true, renewable: true },
-        isActive: true 
+        isActive: true,
       });
     }
   }, [planToEdit, isOpen]);
@@ -48,10 +53,19 @@ const PlanModal = ({ isOpen, onClose, onSave, planToEdit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const bp = String(formData.billingPeriod || 'monthly').toLowerCase();
     onSave({
-      ...formData,
+      name: formData.name.trim(),
       price: Number(formData.price),
-      minQty: formData.minQty ? Number(formData.minQty) : 1
+      billingPeriod: bp,
+      minQty: formData.minQty ? Number(formData.minQty) : 1,
+      startDate: formData.startDate || null,
+      endDate: formData.endDate || null,
+      autoClose: Boolean(formData.options?.autoClose),
+      closable: Boolean(formData.options?.closable),
+      pausable: Boolean(formData.options?.pausable),
+      renewable: Boolean(formData.options?.renewable),
+      isActive: Boolean(formData.isActive),
     });
   };
 
@@ -103,10 +117,10 @@ const PlanModal = ({ isOpen, onClose, onSave, planToEdit }) => {
                   onChange={(e) => setFormData({...formData, billingPeriod: e.target.value})}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all appearance-none text-sm font-medium"
                 >
-                  <option value="Daily">Daily Execution</option>
-                  <option value="Weekly">Weekly Execution</option>
-                  <option value="Monthly">Monthly Execution</option>
-                  <option value="Yearly">Yearly Execution</option>
+                  <option value="daily">Daily Execution</option>
+                  <option value="weekly">Weekly Execution</option>
+                  <option value="monthly">Monthly Execution</option>
+                  <option value="yearly">Yearly Execution</option>
                 </select>
              </div>
              <div>

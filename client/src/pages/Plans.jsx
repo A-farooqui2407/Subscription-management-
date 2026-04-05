@@ -55,7 +55,11 @@ const Plans = () => {
       setIsModalOpen(false);
       fetchPlans();
     } catch (e) {
-      toast.error("Failed to commit architecture modifications.");
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Could not save the plan.';
+      toast.error(msg);
     }
   };
 
@@ -65,7 +69,11 @@ const Plans = () => {
         toast.info(`Registration queue has been toggled to: ${newActiveState ? 'active' : 'suspended'}.`);
         fetchPlans();
      } catch (e) {
-        toast.error("Suspension switch native failure.");
+        const msg =
+          e.response?.data?.message ||
+          e.message ||
+          'Could not update the plan.';
+        toast.error(msg);
      }
   };
 
@@ -76,7 +84,11 @@ const Plans = () => {
       setIsConfirmOpen(false);
       fetchPlans();
     } catch (e) {
-      toast.error("Deletion rejected heavily via synthetics.");
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Could not delete the plan.';
+      toast.error(msg);
     }
   };
 
@@ -143,10 +155,10 @@ const Plans = () => {
             className="flex-1 sm:w-48 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 py-2.5 px-3 outline-none"
           >
             <option value="">Cycle Match: All</option>
-            <option value="Daily">Daily Rotations</option>
-            <option value="Weekly">Weekly Schedules</option>
-            <option value="Monthly">Monthly Routines</option>
-            <option value="Yearly">Yearly Contracts</option>
+            <option value="daily">Daily Rotations</option>
+            <option value="weekly">Weekly Schedules</option>
+            <option value="monthly">Monthly Routines</option>
+            <option value="yearly">Yearly Contracts</option>
           </select>
           <select 
             value={isActiveFilter}
@@ -194,7 +206,7 @@ const Plans = () => {
                     <td className="p-4 pl-6">
                        <span className="font-bold text-slate-800 tracking-tight text-sm whitespace-nowrap">{p.name}</span>
                        <div className="font-mono text-cyan-600 font-bold bg-cyan-50 px-2 py-0.5 rounded text-xs mt-1.5 inline-block">
-                           ${Number(p.price).toFixed(2)} / {p.billingPeriod.toLowerCase().replace('ly', '')}
+                           ${Number(p.price).toFixed(2)} / {String(p.billingPeriod || '').toLowerCase()}
                        </div>
                     </td>
                     <td className="p-4">
@@ -212,8 +224,8 @@ const Plans = () => {
                     </td>
                     <td className="p-4 text-center">
                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold border 
-                          ${p.subscriptionsCount > 0 ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                          {p.subscriptionsCount} Subs
+                          ${(p.subscriptionCount ?? 0) > 0 ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                          {p.subscriptionCount ?? 0} Subs
                        </span>
                     </td>
                     <td className="p-4 text-center">

@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { X, Contact, Save } from 'lucide-react';
+import { X, Contact, Save, AlertCircle } from 'lucide-react';
+import { validateContactForm } from '../utils/validation';
 
 const ContactModal = ({ isOpen, onClose, onSave, contactToEdit }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    type: 'Lead'
+    type: 'customer'
   });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (contactToEdit) {
@@ -15,18 +18,45 @@ const ContactModal = ({ isOpen, onClose, onSave, contactToEdit }) => {
         name: contactToEdit.name || '',
         email: contactToEdit.email || '',
         phone: contactToEdit.phone || '',
-        type: contactToEdit.type || 'Lead'
+        type: contactToEdit.type || 'customer'
       });
     } else {
-      setFormData({ name: '', email: '', phone: '', type: 'Lead' });
+      setFormData({ name: '', email: '', phone: '', type: 'customer' });
     }
+    setErrors({});
   }, [contactToEdit, isOpen]);
 
   if (!isOpen) return null;
 
+  const handleInputChange = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: undefined });
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    
+    // Validate form
+    const validation = validateContactForm(formData);
+    if (!validation.valid) {
+      setErrors(validation.errors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      onSave({
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone ? formData.phone.trim() : null,
+        type: formData.type
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -53,10 +83,14 @@ const ContactModal = ({ isOpen, onClose, onSave, contactToEdit }) => {
               required 
               type="text" 
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none focus:ring-2 transition-all ${
+                errors.name ? 'border-red-300 focus:ring-red-500/50 focus:border-red-500' : 'border-slate-300 focus:ring-emerald-500/50 focus:border-emerald-500'
+              }`}
               placeholder="e.g. Acme Corp / Jane Doe"
+              disabled={isSubmitting}
             />
+            {errors.name && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={14} /> {errors.name}</p>}
           </div>
           
           <div>
@@ -65,34 +99,44 @@ const ContactModal = ({ isOpen, onClose, onSave, contactToEdit }) => {
               required 
               type="email" 
               value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none focus:ring-2 transition-all ${
+                errors.email ? 'border-red-300 focus:ring-red-500/50 focus:border-red-500' : 'border-slate-300 focus:ring-emerald-500/50 focus:border-emerald-500'
+              }`}
               placeholder="contact@company.com"
+              disabled={isSubmitting}
             />
+            {errors.email && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={14} /> {errors.email}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Primary Phone</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone (Indian Format)</label>
             <input 
               type="text" 
               value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
-              placeholder="+1 (555) 000-0000"
+              onChange={(e) => handleInputChange('phone', e.target.value)}
+              className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none focus:ring-2 transition-all ${
+                errors.phone ? 'border-red-300 focus:ring-red-500/50 focus:border-red-500' : 'border-slate-300 focus:ring-emerald-500/50 focus:border-emerald-500'
+              }`}
+              placeholder="e.g. 9876543210 or +91 9876543210"
+              disabled={isSubmitting}
             />
+            {errors.phone && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={14} /> {errors.phone}</p>}
+            {!errors.phone && formData.phone && (
+              <p className="text-green-600 text-xs mt-1">✓ Valid Indian phone number</p>
+            )}
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">Contact Type</label>
             <select 
               value={formData.type}
-              onChange={(e) => setFormData({...formData, type: e.target.value})}
+              onChange={(e) => handleInputChange('type', e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all appearance-none"
+              disabled={isSubmitting}
             >
-              <option value="Lead">Lead</option>
-              <option value="Customer">Customer</option>
-              <option value="Partner">Partner</option>
-              <option value="Vendor">Vendor</option>
+              <option value="customer">Customer</option>
+              <option value="subscriber">Subscriber</option>
             </select>
           </div>
 
@@ -100,13 +144,15 @@ const ContactModal = ({ isOpen, onClose, onSave, contactToEdit }) => {
             <button 
               type="button" 
               onClick={onClose}
-              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors"
+              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors disabled:opacity-50"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button 
               type="submit"
-              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors shadow-sm flex justify-center items-center gap-2"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors shadow-sm flex justify-center items-center gap-2"
             >
               <Save className="w-4 h-4" />
               {contactToEdit ? 'Save Changes' : 'Create Contact'}

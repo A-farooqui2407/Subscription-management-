@@ -36,6 +36,9 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/40 via-[#0a0a0a] to-[#0a0a0a] px-4">
       <div className="max-w-md w-full backdrop-blur-xl bg-white/5 p-8 rounded-3xl border border-white/10 shadow-2xl">
         <div className="text-center mb-10">
+          <p className="text-2xl font-black tracking-tight text-white mb-4">
+            TR<span className="text-indigo-400">ACE</span>
+          </p>
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 mb-6 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
             <LogIn size={32} />
           </div>
@@ -103,12 +106,6 @@ const Login = () => {
             Don't have an account? <Link to="/signup" className="text-white hover:text-blue-400 font-bold transition-colors">Sign up</Link>
           </p>
         </form>
-
-        <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300 font-mono space-y-1">
-          <p className="font-bold mb-1">Demo login (after <span className="text-white">npm run seed</span>):</p>
-          <p>admin@demo.subscription / Demo123!Secure</p>
-          <p className="text-blue-200/80 pt-1">Use your own DB users if you did not run the demo seed.</p>
-        </div>
       </div>
     </div>
   );

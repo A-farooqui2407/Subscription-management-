@@ -21,7 +21,7 @@ const OrderLinesTable = ({ lines, setLines, products, taxes, readOnly = false })
     
     // Auto-fetch price if product changes
     if (field === 'productId') {
-        const prod = products.find(p => p.id === Number(value));
+        const prod = products.find((p) => String(p.id) === String(value));
         if (prod) {
             updatedLine.unitPrice = prod.salesPrice || 0;
             updatedLine.variantId = ''; // Reset variant
@@ -40,7 +40,7 @@ const OrderLinesTable = ({ lines, setLines, products, taxes, readOnly = false })
       const amount = calculateAmount(line);
       acc.subtotal += amount;
       
-      const taxConfig = taxes.find(t => t.id === Number(line.taxId));
+      const taxConfig = taxes.find((t) => String(t.id) === String(line.taxId));
       if (taxConfig && taxConfig.percentage) {
          acc.tax += amount * (taxConfig.percentage / 100);
       }
@@ -66,7 +66,9 @@ const OrderLinesTable = ({ lines, setLines, products, taxes, readOnly = false })
             </thead>
             <tbody className="divide-y divide-slate-100">
                 {lines.map((line, index) => {
-                    const selectedProduct = products.find(p => p.id === Number(line.productId));
+                    const selectedProduct = products.find(
+                      (p) => String(p.id) === String(line.productId),
+                    );
                     const availableVariants = selectedProduct?.variants || [];
                     const lineAmount = calculateAmount(line);
                     

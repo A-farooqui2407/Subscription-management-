@@ -29,7 +29,7 @@ const Discounts = () => {
   const fetchDiscounts = useCallback(async () => {
     setLoading(true);
     try {
-      const appliesMap = { Subscriptions: 'subscriptions', Products: 'products', Both: '' };
+      const appliesMap = { Subscriptions: 'subscriptions', Products: 'products' };
       const appliesTo = appliesMap[appliesFilter] ?? appliesFilter;
       const { rows } = await discountsApi.getDiscounts({
         ...(appliesTo ? { appliesTo } : {}),
@@ -37,7 +37,11 @@ const Discounts = () => {
       });
       setData(rows);
     } catch (e) {
-      toast.error('Failed to load discounts mapping pipeline');
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Failed to load discounts';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -52,15 +56,19 @@ const Discounts = () => {
     try {
       if (editingDiscount) {
         await discountsApi.updateDiscount(editingDiscount.id, dData);
-        toast.success("Discount criteria updated.");
+        toast.success("Discount updated successfully.");
       } else {
         await discountsApi.createDiscount(dData);
-        toast.success("Discount promo minted.");
+        toast.success("Discount created successfully.");
       }
       setIsModalOpen(false);
       fetchDiscounts();
     } catch (e) {
-      toast.error("Failed to compile discount settings.");
+      const msg =
+        e.response?.data?.message ||
+        e.message ||
+        'Failed to save discount. Please check your inputs.';
+      toast.error(msg);
     }
   };
 
@@ -136,7 +144,6 @@ const Discounts = () => {
             <option value="">Targets: All</option>
             <option value="Subscriptions">Subscriptions Only</option>
             <option value="Products">Products Only</option>
-            <option value="Both">Target Unrestricted</option>
           </select>
           <select 
             value={isActiveFilter}
@@ -189,12 +196,12 @@ const Discounts = () => {
                            {expired && <span className="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Expired</span>}
                        </div>
                        <div className="text-xs text-slate-500 font-medium mt-1">
-                          Applies implicitly to: <span className="text-orange-600">{d.appliesTo}</span>
+                          Applies implicitly to: <span className="text-orange-600">{String(d.appliesTo || '').charAt(0).toUpperCase() + String(d.appliesTo || '').slice(1)}</span>
                        </div>
                     </td>
                     <td className="p-4">
                         <span className="font-mono text-orange-600 font-extrabold bg-orange-50 px-2 py-1 rounded inline-block">
-                           {d.type === 'Percentage' ? `${d.value}% OFF` : `$${d.value.toFixed(2)} OFF`}
+                           {String(d.type || '').toLowerCase() === 'percentage' ? `${d.value}% OFF` : `$${Number(d.value).toFixed(2)} OFF`}
                         </span>
                     </td>
                     <td className="p-4">
